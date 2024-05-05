@@ -19,5 +19,7 @@ func ProductRouter() *chi.Mux {
 
 	r.Delete("/{id}", controllers.DeleteProductById())
 
+	r.Post("/{id}/consume-stock", controllers.UpdateProductStockCount)
+
 	return r
 }
