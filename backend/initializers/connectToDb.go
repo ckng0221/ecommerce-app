@@ -15,7 +15,7 @@ var Db *gorm.DB
 func ConnectToDb() {
 	env := os.Getenv("ENV")
 	logLevel := logger.Silent
-	if env == "development" {
+	if env == "development" || env == "local" {
 		// logLevel = logger.Info
 	}
 

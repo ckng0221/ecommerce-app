@@ -70,7 +70,7 @@ func UpdateProductStock() func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(422)
 			json.NewEncoder(w).Encode(map[string]string{
-				"error": "insufficient stock",
+				"message": "insufficient stock",
 			})
 			return
 		}
@@ -83,8 +83,7 @@ func UpdateProductStock() func(w http.ResponseWriter, r *http.Request) {
 			symbol = "-"
 		}
 		expression := fmt.Sprintf("stock_quantity %s ?", symbol)
-		fmt.Println(expression)
-		fmt.Println(stockUpdate.Quantity)
+
 		result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, stockUpdate.Quantity))
 
 		if result.Error != nil {
