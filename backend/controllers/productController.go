@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/go-chi/chi"
+	"gorm.io/gorm"
 )
 
 func GetProducts() func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +33,7 @@ func DeleteProductById() func(w http.ResponseWriter, r *http.Request) {
 	return DeleteById[models.Product]
 }
 
-func UpdateProductStockCount(w http.ResponseWriter, r *http.Request) {
+func UpdateProductStock(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -73,17 +74,14 @@ func UpdateProductStockCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	finalQuantity := product.StockQuantity
+	var result *gorm.DB
 	switch stockUpdate.Action {
 	case "add":
-		finalQuantity = product.StockQuantity + stockUpdate.Quantity
+		result = initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr("stock_quantity + ?", stockUpdate.Quantity))
 	case "consume":
-		finalQuantity = product.StockQuantity - stockUpdate.Quantity
+		result = initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr("stock_quantity - ?", stockUpdate.Quantity))
 	}
 
-	// Optimistic lock
-	result := initializers.Db.Model(&product).Where("id = ? AND stock_quantity = ?",
-		id, product.StockQuantity).Update("stock_quantity", finalQuantity)
 	if result.Error != nil {
 		fmt.Println(result.Error)
 		w.WriteHeader(500)
