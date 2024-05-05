@@ -74,13 +74,17 @@ func UpdateProductStock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var result *gorm.DB
+	var symbol string
 	switch stockUpdate.Action {
 	case "add":
-		result = initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr("stock_quantity + ?", stockUpdate.Quantity))
+		symbol = "+"
 	case "consume":
-		result = initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr("stock_quantity - ?", stockUpdate.Quantity))
+		symbol = "-"
 	}
+	expression := fmt.Sprintf("stock_quantity %s ?", symbol)
+	fmt.Println(expression)
+	fmt.Println(stockUpdate.Quantity)
+	result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, stockUpdate.Quantity))
 
 	if result.Error != nil {
 		fmt.Println(result.Error)
@@ -89,6 +93,5 @@ func UpdateProductStock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(product)
+	w.WriteHeader(202)
 }
