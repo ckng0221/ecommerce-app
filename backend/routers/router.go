@@ -32,6 +32,7 @@ func SetupRouter() *chi.Mux {
 	})
 
 	r.Mount("/products", ProductRouter())
+	r.Mount("/payment", PaymentRouter())
 
 	return r
 }
