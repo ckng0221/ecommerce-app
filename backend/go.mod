@@ -5,6 +5,7 @@ go 1.22.0
 require (
 	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/cors v1.2.1
+	github.com/go-chi/render v1.0.3
 	github.com/joho/godotenv v1.5.1
 	github.com/shopspring/decimal v1.4.0
 	gorm.io/driver/mysql v1.5.6
@@ -12,6 +13,7 @@ require (
 )
 
 require (
+	github.com/ajg/form v1.5.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
