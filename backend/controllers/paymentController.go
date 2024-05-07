@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 
 	"github.com/go-chi/render"
 	"github.com/stripe/stripe-go/v78"
@@ -136,6 +138,48 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, map[string]string{"url": result.URL})
 }
 
+// Trigger fake payment event with stripe CLI (on local only)
+//
+// In dev environment with public URL, could put actual endpoitn.
+func TriggerFakePaymentEvent(w http.ResponseWriter, r *http.Request) {
+	type Event struct {
+		Event string `json:"event"`
+	}
+	body, _ := io.ReadAll(r.Body)
+
+	var event Event
+	// default event
+	var userEvent string = "payment_intent.succeeded"
+	if len(body) > 0 {
+		err := json.Unmarshal(body, &event)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "Invalid request body",
+			})
+		}
+		userEvent = event.Event
+
+	}
+
+	cmd := exec.Command("stripe", "trigger", userEvent)
+	var out bytes.Buffer
+	// define the process standard output
+	cmd.Stdout = &out
+	// Run the command
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(500)
+		return
+	}
+	fmt.Println(out.String())
+
+	render.Status(r, 202)
+	render.JSON(w, r, map[string]string{"message": "Triggered payment event"})
+}
+
 func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
@@ -146,7 +190,6 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// This is your Stripe CLI webhook secret for testing your endpoint locally.
 	endpointSecret := os.Getenv("STRIPE_CLI_WEBHOOK_SECRET")
 	// Pass the request body and Stripe-Signature header to ConstructEvent, along
 	// with the webhook signing key.
@@ -159,8 +202,6 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Unmarshal the event data into an appropriate struct depending on its Type
-	// fmt.Fprintf(os.Stderr, "Unhandled event type: %s\n", event.Type)
 	fmt.Printf("Unhandled event type: %s\n", event.Type)
 
 	w.WriteHeader(http.StatusOK)

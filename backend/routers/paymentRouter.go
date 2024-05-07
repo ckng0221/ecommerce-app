@@ -11,6 +11,7 @@ func PaymentRouter() *chi.Mux {
 
 	r.Post("/checkout/session", controllers.CreateCheckoutSession)
 	r.Post("/webhook", controllers.StripePaymentHook)
+	r.Post("/event/trigger", controllers.TriggerFakePaymentEvent)
 
 	return r
 }
