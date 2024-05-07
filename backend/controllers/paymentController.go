@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"ecommerce-app/initializers"
+	"ecommerce-app/models"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,24 +15,72 @@ import (
 	"github.com/stripe/stripe-go/v78/webhook"
 )
 
+type CheckoutItem struct {
+	ProductID uint `json:"product_id"`
+	Quantity  int  `json:"quantity"`
+}
+
 func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
+	var checkoutItems []CheckoutItem
+	var products []models.Product
+	var idList []uint
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	err = json.Unmarshal(body, &checkoutItems)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "failed to parse request body",
+		})
+		return
+	}
+	// Process request body
+	for _, item := range checkoutItems {
+		idList = append(idList, item.ProductID)
+	}
+	// TODO: Add Request body validation
+	initializers.Db.Find(&products, idList)
+	if len(products) < len(idList) {
+		w.WriteHeader(500)
+		fmt.Println("Checkout and actual products not tally")
+		return
+	}
+
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	successUrl := fmt.Sprintf("%s/successful", frontend_base_url)
 	cancelUrl := fmt.Sprintf("%s/cancel", frontend_base_url)
 	lineItems := []*stripe.CheckoutSessionLineItemParams{}
 
-	lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
-		PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-			Currency: stripe.String("myr"),
-			ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-				Name:        stripe.String("Apple Watch"),
-				Description: stripe.String("This is an Apple Watch"),
+	// Convert to stripe slice
+	for idx, product := range products {
+		var itemQuantity int = 1
+		if checkoutItems[idx].ProductID == product.ID {
+			itemQuantity = checkoutItems[idx].Quantity
+		}
+
+		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
+			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+				Currency: stripe.String(product.Currency),
+				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+					Name:        stripe.String(product.Name),
+					Description: stripe.String(product.Description),
+				},
+				UnitAmount: stripe.Int64(int64(product.UnitPrice * 100)),
 			},
-			UnitAmount: stripe.Int64(100000),
-		},
-		Quantity: stripe.Int64(int64(1)),
-	})
+			Quantity: stripe.Int64(int64(itemQuantity)),
+		})
+	}
 
 	params := &stripe.CheckoutSessionParams{
 		SuccessURL:         stripe.String(successUrl),
@@ -48,7 +99,7 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, map[string]string{"url": result.URL})
 }
 
-func StipePaymentHook(w http.ResponseWriter, r *http.Request) {
+func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 	payload, err := io.ReadAll(r.Body)
