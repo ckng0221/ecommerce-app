@@ -189,8 +189,9 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
+	fmt.Println("signature", r.Header.Get("Stripe-Signature"))
 
-	endpointSecret := os.Getenv("STRIPE_CLI_WEBHOOK_SECRET")
+	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 	// Pass the request body and Stripe-Signature header to ConstructEvent, along
 	// with the webhook signing key.
 	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"),
