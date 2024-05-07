@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/go-chi/render"
@@ -18,6 +19,23 @@ import (
 type CheckoutItem struct {
 	ProductID uint `json:"product_id"`
 	Quantity  int  `json:"quantity"`
+}
+
+func productIdExists(checkoutItems []models.Product, productID uint) bool {
+	for _, product := range checkoutItems {
+		if product.ID == productID {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *CheckoutItem) validate() url.Values {
+	errs := url.Values{}
+	if c.Quantity <= 0 {
+		errs.Add("quantity", "Quantity has to be greater than 0")
+	}
+	return errs
 }
 
 func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
@@ -46,14 +64,33 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	}
 	// Process request body
 	for _, item := range checkoutItems {
+		if validErrs := item.validate(); len(validErrs) > 0 {
+			err := map[string]interface{}{"message": validErrs}
+			w.Header().Set("Content-type", "application/json")
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
 		idList = append(idList, item.ProductID)
 	}
-	// TODO: Add Request body validation
-	initializers.Db.Find(&products, idList)
-	if len(products) < len(idList) {
+
+	err = initializers.Db.Find(&products, idList).Error
+	if err != nil {
 		w.WriteHeader(500)
-		fmt.Println("Checkout and actual products not tally")
+		fmt.Println(err)
 		return
+	}
+
+	// Check if all proudcts can be found
+	for _, productId := range idList {
+		if !productIdExists(products, productId) {
+			w.Header().Set("Content-type", "application/json")
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": fmt.Sprintf("Product ID: %v not found", productId),
+			})
+			return
+		}
 	}
 
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
