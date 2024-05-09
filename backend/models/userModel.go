@@ -17,6 +17,7 @@ type User struct {
 	Role       Role   `gorm:"type:enum('admin', 'member'); default:member"`
 	ProfilePic string `gorm:"type:varchar(255)"`
 	Sub        string `gorm:"type:varchar(100); unique"`
+	Carts      []Cart `gorm:"foreignKey:UserID"`
 }
 
 type GoogleProfile struct {

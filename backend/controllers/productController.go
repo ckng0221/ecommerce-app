@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"slices"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/render"
 	"gorm.io/gorm"
 )
 
@@ -33,65 +33,118 @@ func DeleteProductById() func(w http.ResponseWriter, r *http.Request) {
 	return DeleteById[models.Product]
 }
 
-func UpdateProductStock(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Invalid request body"))
-		return
-	}
+func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			render.Status(r, 400)
+			render.JSON(w, r, map[string]string{
+				"message": "Invalid request body",
+			})
+			return
+		}
 
-	var stockUpdate = struct {
-		Action   string `json:"action"`
-		Quantity int    `json:"stock_quantity"`
-	}{}
+		var stockUpdate = struct {
+			Quantity int `json:"stock_quantity"`
+		}{}
 
-	err = json.Unmarshal(body, &stockUpdate)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(400)
-		w.Write([]byte("failed to parse request body"))
-		return
-	}
-	var availableActions = []string{"add", "consume"}
-	if !slices.Contains(availableActions, stockUpdate.Action) {
-		w.WriteHeader(422)
-		w.Write([]byte("Invalid action"))
-		return
-	}
+		err = json.Unmarshal(body, &stockUpdate)
+		if err != nil {
+			render.Status(r, 400)
+			render.JSON(w, r, map[string]string{
+				"message": "failed to parse request body",
+			})
+			return
+		}
+		if stockUpdate.Quantity <= 0 {
+			render.Status(r, 422)
+			render.JSON(w, r, map[string]string{
+				"message": "Quantity cannot less than or equal to 0",
+			})
+			return
+		}
 
-	var product models.Product
+		var product models.Product
 
-	initializers.Db.First(&product, id)
+		initializers.Db.First(&product, id)
 
-	if stockUpdate.Action == "consume" && product.StockQuantity < stockUpdate.Quantity {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(422)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "insufficient stock",
+		if product.StockQuantity < stockUpdate.Quantity {
+			render.Status(r, 422)
+			render.JSON(w, r, map[string]string{
+				"message": "insufficient stock",
+			})
+			return
+		}
+
+		expression := "stock_quantity - ?"
+
+		result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, stockUpdate.Quantity))
+		initializers.Db.First(&product, product.ID)
+
+		if result.Error != nil {
+			fmt.Println(result.Error)
+			render.Status(r, 400)
+			return
+		}
+
+		render.Status(r, 200)
+		render.JSON(w, r, map[string]int{
+			"stock_quantity": product.StockQuantity,
 		})
-		return
 	}
+}
 
-	var symbol string
-	switch stockUpdate.Action {
-	case "add":
-		symbol = "+"
-	case "consume":
-		symbol = "-"
+func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			render.Status(r, 400)
+			render.JSON(w, r, map[string]string{
+				"message": "Invalid request body",
+			})
+			return
+		}
+
+		var stockUpdate = struct {
+			Quantity int `json:"stock_quantity"`
+		}{}
+
+		err = json.Unmarshal(body, &stockUpdate)
+		if err != nil {
+			render.Status(r, 400)
+			render.JSON(w, r, map[string]string{
+				"message": "failed to parse request body",
+			})
+			return
+		}
+		if stockUpdate.Quantity <= 0 {
+			render.Status(r, 422)
+			render.JSON(w, r, map[string]string{
+				"message": "Quantity cannot less than or equal to 0",
+			})
+			return
+		}
+
+		var product models.Product
+
+		initializers.Db.First(&product, id)
+
+		expression := "stock_quantity + ?"
+
+		result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, stockUpdate.Quantity))
+		initializers.Db.First(&product, product.ID)
+
+		if result.Error != nil {
+			fmt.Println(result.Error)
+			render.Status(r, 400)
+			return
+		}
+
+		render.Status(r, 200)
+		render.JSON(w, r, map[string]int{
+			"stock_quantity": product.StockQuantity,
+		})
 	}
-	expression := fmt.Sprintf("stock_quantity %s ?", symbol)
-	fmt.Println(expression)
-	fmt.Println(stockUpdate.Quantity)
-	result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, stockUpdate.Quantity))
-
-	if result.Error != nil {
-		fmt.Println(result.Error)
-		w.WriteHeader(500)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(202)
 }
