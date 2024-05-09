@@ -189,21 +189,22 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	fmt.Println("signature", r.Header.Get("Stripe-Signature"))
+	// fmt.Println("signature", r.Header.Get("Stripe-Signature"))
 
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
-	// Pass the request body and Stripe-Signature header to ConstructEvent, along
-	// with the webhook signing key.
+
 	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"),
 		endpointSecret)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
-		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	fmt.Printf("Unhandled event type: %s\n", event.Type)
+
+	// TODO: update order for payment done
 
 	w.WriteHeader(http.StatusOK)
 }
