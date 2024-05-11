@@ -12,9 +12,24 @@ import (
 	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Model interface{}
+
+// TODO: Change to new style
+func GetAllNew[T Model](w http.ResponseWriter, r *http.Request, modelObjsC interface{}) {
+	var modelObjs []T
+
+	paginationScope, error := utils.Paginate(r)
+	if error != nil {
+		jsend.Fail(w, error.Error(), http.StatusBadRequest)
+		return
+	}
+
+	initializers.Db.Model(&modelObjs).Preload(clause.Associations).Scopes(paginationScope).Find(&modelObjsC)
+	jsend.Success(w, &modelObjsC)
+}
 
 func GetAll[T Model](w http.ResponseWriter, r *http.Request) {
 	var modelObjs []T
@@ -72,7 +87,21 @@ func GetById[T Model](w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsend.Success(w, &modelObj)
+}
 
+func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdName string, preloadName string) {
+	var modelObjs []T
+	id := chi.URLParam(r, "id")
+
+	paginationScope, error := utils.Paginate(r)
+	if error != nil {
+		jsend.Fail(w, error.Error(), http.StatusBadRequest)
+		return
+	}
+
+	expression := fmt.Sprintf("%s = ?", chilrenIdName)
+	initializers.Db.Preload(preloadName).Scopes(paginationScope).Find(&modelObjs).Where(expression, id)
+	jsend.Success(w, &modelObjs)
 }
 
 func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) {

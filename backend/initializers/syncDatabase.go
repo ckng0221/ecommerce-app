@@ -10,5 +10,6 @@ func SynDatabase() {
 		&models.Cart{},
 		&models.Order{},
 		&models.OrderItem{},
+		&models.Payment{},
 	)
 }

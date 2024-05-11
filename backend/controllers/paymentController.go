@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"time"
 
 	"clevergo.tech/jsend"
 	"github.com/stripe/stripe-go/v78"
@@ -41,7 +43,12 @@ func (c *CheckoutItem) validate() url.Values {
 }
 
 func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	var checkoutItems []CheckoutItem
+	type CheckoutRequestBody struct {
+		OrderID       uint           `json:"order_id"`
+		CheckoutItems []CheckoutItem `json:"checkout_items"`
+	}
+
+	var checkoutRequestBody CheckoutRequestBody
 	var products []models.Product
 	var idList []uint
 
@@ -52,11 +59,13 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.Unmarshal(body, &checkoutItems)
+	err = json.Unmarshal(body, &checkoutRequestBody)
 	if err != nil {
-		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
+		jsend.Fail(w, "Failed to parse request body", http.StatusBadRequest)
 		return
 	}
+	checkoutItems := checkoutRequestBody.CheckoutItems
+
 	// Process request body
 	for _, item := range checkoutItems {
 		if validErrs := item.validate(); len(validErrs) > 0 {
@@ -116,12 +125,18 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 		LineItems:          lineItems,
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 	}
+
+	params.AddMetadata("order_id", fmt.Sprint(checkoutRequestBody.OrderID))
+
+	// fmt.Println("param", params)
 	result, err := session.New(params)
 	if err != nil {
 		fmt.Println(err)
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("meta", result.Metadata)
+	fmt.Println("id", result.ID)
 
 	jsend.Success(w, map[string]string{"url": result.URL})
 }
@@ -184,10 +199,64 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		jsend.Fail(w, nil, http.StatusBadRequest)
 		return
 	}
+	// fmt.Println(event)
+	// fmt.Println("ID", event.ID)
+	// fmt.Println("data", event.Data)
+	err = processPaymentEvent(event)
 
-	fmt.Printf("Unhandled event type: %s\n", event.Type)
-
-	// TODO: update order for payment done
+	if err != nil {
+		fmt.Println(err.Error())
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	jsend.Success(w, nil, http.StatusOK)
+}
+
+func processPaymentEvent(event stripe.Event) error {
+	fmt.Printf("Event type: %s\n", event.Type)
+	fmt.Println("raw", string(event.Data.Raw))
+
+	// FIXME: change to use database to check
+	switch event.Type {
+	case "payment_intent.succeeded":
+		var checkoutSession stripe.CheckoutSession
+		fmt.Println("raw", string(event.Data.Raw))
+		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
+		if err != nil {
+			log.Printf("Error decoding payment intent: %v\n", err)
+			return err
+		}
+
+		// Access metadata from the payment intent
+		metadata := checkoutSession.Metadata
+
+		orderID := metadata["order_id"]
+		log.Printf("Received payment for order ID: %s\n", orderID)
+
+		// Further processing based on metadata...
+		var order models.Order
+		err = initializers.Db.First(&order, orderID).Error
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
+		currentTime := time.Now()
+		var orderUpdate = models.OrderUpdate{
+			PaymentAt:   &currentTime,
+			OrderStatus: "to_ship",
+		}
+
+		err = initializers.Db.Model(&order).Updates(&orderUpdate).Error
+		if err != nil {
+			fmt.Println("Failed to update db")
+			return err
+		}
+	}
+	return nil
+}
+
+func GetPayments() func(w http.ResponseWriter, r *http.Request) {
+	return GetAll[models.Payment]
 }

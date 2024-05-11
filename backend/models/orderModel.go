@@ -8,19 +8,21 @@ import (
 
 type Order struct {
 	gorm.Model
-	UserID      uint        `json:"user_id"`
-	User        User        `gorm:"foreignKey:UserID"`
-	AddressID   uint        `json:"address_id"`
-	Address     Address     `gorm:"foreignKey:AddressID"`
-	PaymentAt   time.Time   `json:"payment_at"`
-	OrderStatus OrderStatus `gorm:"type:enum('to_pay', 'to_ship', 'to_receive', 'to_review', 'complete'); default:to_pay"`
+	UserID      uint         `json:"user_id"`
+	User        User         `gorm:"foreignKey:UserID"`
+	AddressID   uint         `json:"address_id"`
+	Address     Address      `gorm:"foreignKey:AddressID"`
+	PaymentAt   *time.Time   `json:"payment_at"`
+	OrderStatus *OrderStatus `gorm:"type:enum('to_pay', 'to_ship', 'to_receive', 'to_review', 'complete'); default:to_pay"`
+	OrderItems  []OrderItem  `json:"order_items"`
 }
 
 type OrderUpdate struct {
 	gorm.Model
-	UserID    *uint      `json:"user_id"`
-	AddressID *Address   `json:"address_id"`
-	PaymentAt *time.Time `json:"payment_at"`
+	UserID      *uint       `json:"user_id"`
+	AddressID   *Address    `json:"address_id"`
+	PaymentAt   *time.Time  `json:"payment_at"`
+	OrderStatus OrderStatus `json:"order_status"`
 }
 
 type OrderStatus string
