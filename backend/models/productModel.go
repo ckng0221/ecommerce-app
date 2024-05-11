@@ -1,12 +1,13 @@
 package models
 
 import (
+	"ecommerce-app/utils"
+
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 type Product struct {
-	gorm.Model
+	utils.DefaultModel
 	Name          string  `gorm:"type:varchar(255)" json:"name"`
 	Description   string  `gorm:"type:varchar(255)" json:"description"`
 	UnitPrice     float32 `gorm:"type:decimal(10,2)" json:"unit_price"`

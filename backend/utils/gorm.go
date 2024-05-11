@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -42,4 +43,15 @@ func Paginate(r *http.Request) (func(db *gorm.DB) *gorm.DB, error) {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Offset(offset).Limit(pageSize)
 	}, nil
+}
+
+func NullScope(db *gorm.DB) *gorm.DB {
+	return db
+}
+
+type DefaultModel struct {
+	ID        uint            `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+	DeletedAt *gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }

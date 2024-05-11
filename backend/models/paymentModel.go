@@ -1,12 +1,10 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
+import "ecommerce-app/utils"
 
 type Payment struct {
-	gorm.Model
+	utils.DefaultModel
 	OrderID         uint   `json:"order_id"`
-	Order           Order  `gorm:"foreignKey:OrderID"`
-	StripeSessionID string `gorm:"type:char(66)"`
+	Order           *Order `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	StripeSessionID string `gorm:"type:char(66)" json:"stripe_session_id"`
 }

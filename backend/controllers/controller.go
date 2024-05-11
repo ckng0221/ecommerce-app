@@ -12,13 +12,12 @@ import (
 	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Model interface{}
 
 // TODO: Change to new style
-func GetAllNew[T Model](w http.ResponseWriter, r *http.Request, modelObjsC interface{}) {
+func GetAllNew[T Model](w http.ResponseWriter, r *http.Request, modelObjsRead interface{}, scope func(db *gorm.DB) *gorm.DB) {
 	var modelObjs []T
 
 	paginationScope, error := utils.Paginate(r)
@@ -27,8 +26,8 @@ func GetAllNew[T Model](w http.ResponseWriter, r *http.Request, modelObjsC inter
 		return
 	}
 
-	initializers.Db.Model(&modelObjs).Preload(clause.Associations).Scopes(paginationScope).Find(&modelObjsC)
-	jsend.Success(w, &modelObjsC)
+	initializers.Db.Model(&modelObjs).Scopes(paginationScope, scope).Find(&modelObjsRead)
+	jsend.Success(w, &modelObjsRead)
 }
 
 func GetAll[T Model](w http.ResponseWriter, r *http.Request) {
