@@ -12,7 +12,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/go-chi/render"
+	"clevergo.tech/jsend"
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/webhook"
@@ -47,30 +47,21 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Invalid request body",
-		})
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
+
 		return
 	}
 
 	err = json.Unmarshal(body, &checkoutItems)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "failed to parse request body",
-		})
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 	// Process request body
 	for _, item := range checkoutItems {
 		if validErrs := item.validate(); len(validErrs) > 0 {
 			err := map[string]interface{}{"message": validErrs}
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(err)
+			jsend.Fail(w, err, http.StatusBadRequest)
 			return
 		}
 		idList = append(idList, item.ProductID)
@@ -78,7 +69,7 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 
 	err = initializers.Db.Find(&products, idList).Error
 	if err != nil {
-		w.WriteHeader(500)
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		fmt.Println(err)
 		return
 	}
@@ -86,11 +77,8 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	// Check if all proudcts can be found
 	for _, productId := range idList {
 		if !productIdExists(products, productId) {
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": fmt.Sprintf("Product ID: %v not found", productId),
-			})
+			jsend.Fail(w, fmt.Sprintf("Product ID: %v not found", productId), http.StatusBadRequest)
+
 			return
 		}
 	}
@@ -131,11 +119,11 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	result, err := session.New(params)
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(500)
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	render.JSON(w, r, map[string]string{"url": result.URL})
+	jsend.Success(w, map[string]string{"url": result.URL})
 }
 
 // Trigger fake payment event with stripe CLI (on local only)
@@ -153,11 +141,7 @@ func TriggerFakePaymentEvent(w http.ResponseWriter, r *http.Request) {
 	if len(body) > 0 {
 		err := json.Unmarshal(body, &event)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "Invalid request body",
-			})
+			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 		}
 		userEvent = event.Event
 
@@ -176,8 +160,7 @@ func TriggerFakePaymentEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println(out.String())
 
-	render.Status(r, 202)
-	render.JSON(w, r, map[string]string{"message": "Triggered payment event"})
+	jsend.Success(w, map[string]string{"message": "Triggered payment event"}, http.StatusAccepted)
 }
 
 func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
@@ -198,7 +181,7 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
-		w.WriteHeader(http.StatusBadRequest)
+		jsend.Fail(w, nil, http.StatusBadRequest)
 		return
 	}
 
@@ -206,5 +189,5 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: update order for payment done
 
-	w.WriteHeader(http.StatusOK)
+	jsend.Success(w, nil, http.StatusOK)
 }

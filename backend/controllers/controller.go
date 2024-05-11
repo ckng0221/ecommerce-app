@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
 	"gorm.io/gorm"
 )
@@ -20,17 +21,12 @@ func GetAll[T Model](w http.ResponseWriter, r *http.Request) {
 
 	paginationScope, error := utils.Paginate(r)
 	if error != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": error.Error(),
-		})
+		jsend.Fail(w, error.Error(), http.StatusBadRequest)
 		return
 	}
 
 	initializers.Db.Scopes(paginationScope).Find(&modelObjs)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&modelObjs)
+	jsend.Success(w, &modelObjs)
 }
 
 func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
@@ -38,21 +34,13 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Invalid request body",
-		})
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	err = json.Unmarshal(body, &modelObj)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "failed to parse request body",
-		})
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
 
@@ -60,17 +48,11 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		fmt.Println(result.Error)
 
-		w.WriteHeader(500)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "failed to create item",
-		})
+		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	json.NewEncoder(w).Encode(&modelObj)
+	jsend.Success(w, &modelObj, http.StatusCreated)
 }
 
 func GetById[T Model](w http.ResponseWriter, r *http.Request) {
@@ -81,20 +63,16 @@ func GetById[T Model](w http.ResponseWriter, r *http.Request) {
 	err := initializers.Db.First(&modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "Record not found",
-			})
+			jsend.Fail(w, "Record not found", http.StatusBadRequest)
 			return
 		}
-		w.WriteHeader(500)
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		fmt.Println(err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&modelObj)
+	jsend.Success(w, &modelObj)
+
 }
 
 func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) {
@@ -105,42 +83,30 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Invalid request body",
-		})
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	err = json.Unmarshal(body, &modelObj)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Failed to parse request body",
-		})
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
 
 	err = initializers.Db.First(&modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "Record not found",
-			})
+			jsend.Fail(w, "Record not found", http.StatusNotFound)
 			return
 		}
-		w.WriteHeader(500)
 		fmt.Println(err)
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	initializers.Db.Model(&modelObj).Updates(&modelUpdateObj)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&modelObj)
+	jsend.Success(w, &modelObj)
+
 }
 
 func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
@@ -151,16 +117,13 @@ func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
 	err := initializers.Db.First(&modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "Record not found",
-			})
+			jsend.Fail(w, "Record not found", http.StatusNotFound)
 			return
+
 		}
 		fmt.Println(err)
 
-		w.WriteHeader(500)
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -168,9 +131,9 @@ func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		fmt.Println(err)
 
-		w.WriteHeader(500)
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(202)
+	jsend.Success(w, nil, http.StatusNoContent)
 }
