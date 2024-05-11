@@ -45,7 +45,7 @@ func Paginate(r *http.Request) (func(db *gorm.DB) *gorm.DB, error) {
 	}, nil
 }
 
-func NullScope(db *gorm.DB) *gorm.DB {
+func EmptyScope(db *gorm.DB) *gorm.DB {
 	return db
 }
 

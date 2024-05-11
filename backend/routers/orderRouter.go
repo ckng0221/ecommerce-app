@@ -13,7 +13,7 @@ func OrderRouter() *chi.Mux {
 
 	r.Post("/", controllers.CreateOrders())
 
-	r.Get("/{id}", controllers.GetOrderById())
+	r.Get("/{id}", controllers.GetOrderById)
 
 	r.Patch("/{id}", controllers.UpdateOrderById())
 

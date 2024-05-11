@@ -9,11 +9,11 @@ import (
 func UserRouter() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Get("/", controllers.GetUsers())
+	r.Get("/", controllers.GetUsers)
 
 	r.Post("/", controllers.CreateUser())
 
-	r.Get("/{id}", controllers.GetUserById())
+	r.Get("/{id}", controllers.GetUserById)
 
 	r.Get("/{id}/addresses", controllers.GetAddressesByUserId)
 

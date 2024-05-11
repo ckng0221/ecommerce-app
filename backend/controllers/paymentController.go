@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
+	"ecommerce-app/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -257,6 +258,6 @@ func processPaymentEvent(event stripe.Event) error {
 	return nil
 }
 
-func GetPayments() func(w http.ResponseWriter, r *http.Request) {
-	return GetAll[models.Payment]
+func GetPayments(w http.ResponseWriter, r *http.Request) {
+	GetAll[models.Payment](w, r, utils.EmptyScope)
 }

@@ -9,11 +9,11 @@ import (
 func ProductRouter() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Get("/", controllers.GetProducts())
+	r.Get("/", controllers.GetProducts)
 
 	r.Post("/", controllers.CreateProducts())
 
-	r.Get("/{id}", controllers.GetProductById())
+	r.Get("/{id}", controllers.GetProductById)
 
 	r.Patch("/{id}", controllers.UpdateProductById())
 

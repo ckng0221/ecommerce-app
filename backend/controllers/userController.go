@@ -3,6 +3,7 @@ package controllers
 import (
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
+	"ecommerce-app/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,10 +12,11 @@ import (
 
 	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
+	"gorm.io/gorm"
 )
 
-func GetUsers() func(w http.ResponseWriter, r *http.Request) {
-	return GetAll[models.User]
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+	GetAll[models.User](w, r, utils.EmptyScope)
 }
 
 func CreateUser() func(w http.ResponseWriter, r *http.Request) {
@@ -25,8 +27,12 @@ func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
 	return CreateOne[models.Address]
 }
 
-func GetUserById() func(w http.ResponseWriter, r *http.Request) {
-	return GetById[models.User]
+func GetUserById(w http.ResponseWriter, r *http.Request) {
+	var scope = func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DefaultAddress")
+	}
+
+	GetById[models.User](w, r, scope)
 }
 
 func GetAddressesByUserId(w http.ResponseWriter, r *http.Request) {

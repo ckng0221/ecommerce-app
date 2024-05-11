@@ -9,7 +9,7 @@ import (
 func PaymentRouter() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Get("/", controllers.GetPayments())
+	r.Get("/", controllers.GetPayments)
 	r.Post("/checkout/session", controllers.CreateCheckoutSession)
 	r.Post("/webhook", controllers.StripePaymentHook)
 	r.Post("/event/trigger", controllers.TriggerFakePaymentEvent)

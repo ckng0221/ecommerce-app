@@ -3,6 +3,7 @@ package controllers
 import (
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
+	"ecommerce-app/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,16 +14,16 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetProducts() func(w http.ResponseWriter, r *http.Request) {
-	return GetAll[models.Product]
+func GetProducts(w http.ResponseWriter, r *http.Request) {
+	GetAll[models.Product](w, r, utils.EmptyScope)
 }
 
 func CreateProducts() func(w http.ResponseWriter, r *http.Request) {
 	return CreateOne[models.Product]
 }
 
-func GetProductById() func(w http.ResponseWriter, r *http.Request) {
-	return GetById[models.Product]
+func GetProductById(w http.ResponseWriter, r *http.Request) {
+	GetById[models.Product](w, r, utils.EmptyScope)
 }
 
 func UpdateProductById() func(w http.ResponseWriter, r *http.Request) {

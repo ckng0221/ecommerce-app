@@ -44,7 +44,7 @@ type GoogleProfile struct {
 type Address struct {
 	utils.DefaultModel
 	UserID uint   `json:"user_id"`
-	User   *User  `gorm:"foreignKey:UserID" json:",omitempty"`
+	User   *User  `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Street string `gorm:"type:varchar(100)" json:"street"`
 	City   string `gorm:"type:varchar(50)" json:"city"`
 	State  string `gorm:"type:varchar(50)" json:"state"`

@@ -16,8 +16,7 @@ import (
 
 type Model interface{}
 
-// TODO: Change to new style
-func GetAllNew[T Model](w http.ResponseWriter, r *http.Request, modelObjsRead interface{}, scope func(db *gorm.DB) *gorm.DB) {
+func GetAll[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB) {
 	var modelObjs []T
 
 	paginationScope, error := utils.Paginate(r)
@@ -26,20 +25,7 @@ func GetAllNew[T Model](w http.ResponseWriter, r *http.Request, modelObjsRead in
 		return
 	}
 
-	initializers.Db.Model(&modelObjs).Scopes(paginationScope, scope).Find(&modelObjsRead)
-	jsend.Success(w, &modelObjsRead)
-}
-
-func GetAll[T Model](w http.ResponseWriter, r *http.Request) {
-	var modelObjs []T
-
-	paginationScope, error := utils.Paginate(r)
-	if error != nil {
-		jsend.Fail(w, error.Error(), http.StatusBadRequest)
-		return
-	}
-
-	initializers.Db.Scopes(paginationScope).Find(&modelObjs)
+	initializers.Db.Model(&modelObjs).Scopes(paginationScope, scope).Find(&modelObjs)
 	jsend.Success(w, &modelObjs)
 }
 
@@ -69,12 +55,12 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 	jsend.Success(w, &modelObj, http.StatusCreated)
 }
 
-func GetById[T Model](w http.ResponseWriter, r *http.Request) {
+func GetById[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB) {
 	id := chi.URLParam(r, "id")
 
 	var modelObj T
 
-	err := initializers.Db.First(&modelObj, id).Error
+	err := initializers.Db.Scopes(scope).First(&modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			jsend.Fail(w, "Record not found", http.StatusBadRequest)
