@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -29,4 +32,12 @@ func Getenv(key, fallback string) string {
 		value = fallback
 	}
 	return value
+}
+
+func RandString(nByte int) (string, error) {
+	b := make([]byte, nByte)
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }

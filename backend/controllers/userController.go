@@ -12,8 +12,59 @@ import (
 
 	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// Manual signup, without social login
+func Signup(w http.ResponseWriter, r *http.Request) {
+	// Get the email/pass off req bodyu
+	var requestBody models.UserSignUp
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body, &requestBody)
+	if err != nil {
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate email
+	var checkUser models.User
+	initializers.Db.Model(&models.User{}).Where("email = ?", requestBody.Email).First(&checkUser)
+
+	if checkUser.ID != 0 {
+		jsend.Fail(w, "email is already in use", http.StatusBadRequest)
+		return
+	}
+
+	// hash the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(requestBody.Password), 10)
+
+	if err != nil {
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	// Create the user
+	password := string(hash)
+	user := models.User{Name: requestBody.Name, Email: requestBody.Email, Password: &password, Role: "member"}
+	result := initializers.Db.Create(&user)
+
+	if result.Error != nil {
+		fmt.Println("failed to create user")
+		fmt.Println(result.Error)
+
+		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	jsend.Success(w, &user, http.StatusCreated)
+}
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	GetAll[models.User](w, r, utils.EmptyScope)

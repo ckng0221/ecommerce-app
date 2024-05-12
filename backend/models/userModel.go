@@ -1,6 +1,8 @@
 package models
 
-import "ecommerce-app/utils"
+import (
+	"ecommerce-app/utils"
+)
 
 type Role string
 
@@ -28,6 +30,12 @@ type UserUpdate struct {
 	Role             *Role   `json:"role"`
 	ProfilePic       *string `json:"profile_pic"`
 	DefaultAddressID *uint
+}
+
+type UserSignUp struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type GoogleProfile struct {
