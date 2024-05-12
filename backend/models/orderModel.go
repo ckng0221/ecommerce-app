@@ -19,7 +19,7 @@ type Order struct {
 type OrderUpdate struct {
 	utils.DefaultModel
 	UserID      *uint       `json:"user_id"`
-	AddressID   *Address    `json:"address_id"`
+	AddressID   *uint       `json:"address_id"`
 	PaymentAt   *time.Time  `json:"payment_at"`
 	OrderStatus OrderStatus `json:"order_status"`
 }

@@ -43,7 +43,8 @@ func (c *CheckoutItem) validate() url.Values {
 	return errs
 }
 
-func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
+// Create Payment session in Stripe
+func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 	type CheckoutRequestBody struct {
 		OrderID       uint           `json:"order_id"`
 		CheckoutItems []CheckoutItem `json:"checkout_items"`
@@ -136,8 +137,17 @@ func CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("meta", result.Metadata)
-	fmt.Println("id", result.ID)
+
+	// Create Payment record
+	var payment = models.Payment{
+		OrderID:         checkoutRequestBody.OrderID,
+		StripeSessionID: result.ID,
+	}
+	err = initializers.Db.Model(&models.Payment{}).Create(&payment).Error
+	if err != nil {
+		fmt.Println("Failed to create payment in db")
+		return
+	}
 
 	jsend.Success(w, map[string]string{"url": result.URL})
 }
@@ -200,9 +210,7 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		jsend.Fail(w, nil, http.StatusBadRequest)
 		return
 	}
-	// fmt.Println(event)
-	// fmt.Println("ID", event.ID)
-	// fmt.Println("data", event.Data)
+
 	err = processPaymentEvent(event)
 
 	if err != nil {
@@ -215,25 +223,20 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 }
 
 func processPaymentEvent(event stripe.Event) error {
-	fmt.Printf("Event type: %s\n", event.Type)
-	fmt.Println("raw", string(event.Data.Raw))
-
-	// FIXME: change to use database to check
 	switch event.Type {
-	case "payment_intent.succeeded":
+	case "checkout.session.completed":
 		var checkoutSession stripe.CheckoutSession
-		fmt.Println("raw", string(event.Data.Raw))
+		// fmt.Println("raw", string(event.Data.Raw))
 		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 		if err != nil {
-			log.Printf("Error decoding payment intent: %v\n", err)
+			fmt.Println("Failed to parse event data raw.")
 			return err
 		}
 
-		// Access metadata from the payment intent
-		metadata := checkoutSession.Metadata
+		orderID := checkoutSession.Metadata["order_id"]
+		stripeCheckoutSessionID := checkoutSession.ID
 
-		orderID := metadata["order_id"]
-		log.Printf("Received payment for order ID: %s\n", orderID)
+		log.Printf("Received payment for order ID: %v\n", orderID)
 
 		// Further processing based on metadata...
 		var order models.Order
@@ -248,8 +251,22 @@ func processPaymentEvent(event stripe.Event) error {
 			PaymentAt:   &currentTime,
 			OrderStatus: "to_ship",
 		}
-
+		// Update Order
 		err = initializers.Db.Model(&order).Updates(&orderUpdate).Error
+		if err != nil {
+			fmt.Println("Failed to update db")
+			return err
+		}
+
+		// Update Payment
+		var paymentDone = true
+		var paymentUpdate = models.PaymentUpdate{
+			IsComplete: &paymentDone,
+			PaymentAt:  &currentTime,
+		}
+		var payment models.Payment
+
+		err = initializers.Db.Model(&payment).Where("stripe_session_id", stripeCheckoutSessionID).Updates(&paymentUpdate).Error
 		if err != nil {
 			fmt.Println("Failed to update db")
 			return err

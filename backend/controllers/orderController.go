@@ -14,6 +14,7 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// TODO: need to create a page in frontend for creating order first, then only proceed to payment
 func CreateOrders() func(w http.ResponseWriter, r *http.Request) {
 	return CreateOne[models.Order]
 }
