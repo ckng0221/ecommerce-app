@@ -66,8 +66,8 @@ func GetById[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gor
 			jsend.Fail(w, "Record not found", http.StatusBadRequest)
 			return
 		}
-		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		fmt.Println(err)
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 

@@ -30,6 +30,7 @@ func SetupRouter() *chi.Mux {
 		w.Write([]byte("Hello Ecommerce App!"))
 	})
 
+	r.Mount("/auth", AuthRoutes())
 	r.Mount("/users", UserRouter())
 	r.Mount("/products", ProductRouter())
 	r.Mount("/orders", OrderRouter())
