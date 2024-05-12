@@ -3,26 +3,27 @@ package controllers
 import (
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
+	"ecommerce-app/utils"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
+	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/render"
 	"gorm.io/gorm"
 )
 
-func GetProducts() func(w http.ResponseWriter, r *http.Request) {
-	return GetAll[models.Product]
+func GetProducts(w http.ResponseWriter, r *http.Request) {
+	GetAll[models.Product](w, r, utils.EmptyScope)
 }
 
 func CreateProducts() func(w http.ResponseWriter, r *http.Request) {
 	return CreateOne[models.Product]
 }
 
-func GetProductById() func(w http.ResponseWriter, r *http.Request) {
-	return GetById[models.Product]
+func GetProductById(w http.ResponseWriter, r *http.Request) {
+	GetById[models.Product](w, r, utils.EmptyScope)
 }
 
 func UpdateProductById() func(w http.ResponseWriter, r *http.Request) {
@@ -38,10 +39,7 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			render.Status(r, 400)
-			render.JSON(w, r, map[string]string{
-				"message": "Invalid request body",
-			})
+			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
 
@@ -51,17 +49,11 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 
 		err = json.Unmarshal(body, &stockUpdate)
 		if err != nil {
-			render.Status(r, 400)
-			render.JSON(w, r, map[string]string{
-				"message": "failed to parse request body",
-			})
+			jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 			return
 		}
 		if stockUpdate.Quantity <= 0 {
-			render.Status(r, 422)
-			render.JSON(w, r, map[string]string{
-				"message": "Quantity cannot less than or equal to 0",
-			})
+			jsend.Fail(w, "Quantity cannot less than or equal to 0", http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -70,10 +62,7 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 		initializers.Db.First(&product, id)
 
 		if product.StockQuantity < stockUpdate.Quantity {
-			render.Status(r, 422)
-			render.JSON(w, r, map[string]string{
-				"message": "insufficient stock",
-			})
+			jsend.Fail(w, "insufficient stock", http.StatusBadRequest)
 			return
 		}
 
@@ -84,14 +73,11 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 
 		if result.Error != nil {
 			fmt.Println(result.Error)
-			render.Status(r, 400)
+			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		render.Status(r, 200)
-		render.JSON(w, r, map[string]int{
-			"stock_quantity": product.StockQuantity,
-		})
+		jsend.Success(w, map[string]int{"stock_quantity": product.StockQuantity})
 	}
 }
 
@@ -100,10 +86,7 @@ func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			render.Status(r, 400)
-			render.JSON(w, r, map[string]string{
-				"message": "Invalid request body",
-			})
+			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
 
@@ -113,17 +96,11 @@ func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
 
 		err = json.Unmarshal(body, &stockUpdate)
 		if err != nil {
-			render.Status(r, 400)
-			render.JSON(w, r, map[string]string{
-				"message": "failed to parse request body",
-			})
+			jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 			return
 		}
 		if stockUpdate.Quantity <= 0 {
-			render.Status(r, 422)
-			render.JSON(w, r, map[string]string{
-				"message": "Quantity cannot less than or equal to 0",
-			})
+			jsend.Fail(w, "Quantity cannot less than or equal to 0", http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -138,13 +115,10 @@ func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
 
 		if result.Error != nil {
 			fmt.Println(result.Error)
-			render.Status(r, 400)
+			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		render.Status(r, 200)
-		render.JSON(w, r, map[string]int{
-			"stock_quantity": product.StockQuantity,
-		})
+		jsend.Success(w, map[string]int{"stock_quantity": product.StockQuantity})
 	}
 }

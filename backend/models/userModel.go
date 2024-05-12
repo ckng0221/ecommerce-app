@@ -1,6 +1,6 @@
 package models
 
-import "gorm.io/gorm"
+import "ecommerce-app/utils"
 
 type Role string
 
@@ -10,14 +10,24 @@ const (
 )
 
 type User struct {
-	gorm.Model
-	Name       string `gorm:"type:varchar(100)"`
-	Email      string `gorm:"type:varchar(100)"`
-	Password   string `gorm:"type:varchar(255)" json:"-"`
-	Role       Role   `gorm:"type:enum('admin', 'member'); default:member"`
-	ProfilePic string `gorm:"type:varchar(255)"`
-	Sub        string `gorm:"type:varchar(100); unique"`
-	Carts      []Cart `gorm:"foreignKey:UserID"`
+	utils.DefaultModel
+	Name             string   `gorm:"type:varchar(100)" json:"name"`
+	Email            string   `gorm:"type:varchar(100)" json:"email"`
+	Password         *string  `gorm:"type:varchar(255)" json:"-"`
+	Role             Role     `gorm:"type:enum('admin', 'member'); default:member" json:"role"`
+	ProfilePic       *string  `gorm:"type:varchar(255)" json:"profile_pic"`
+	Sub              *string  `gorm:"type:varchar(100); unique" json:"sub"`
+	DefaultAddressID *uint    `json:"default_address_id"`
+	DefaultAddress   *Address `json:"default_address,omitempty"`
+	Carts            *[]Cart  `gorm:"foreignKey:UserID" json:"carts,omitempty"`
+}
+type UserUpdate struct {
+	Name             *string `json:"name"`
+	Email            *string `json:"email"`
+	Password         *string `json:"-"`
+	Role             *Role   `json:"role"`
+	ProfilePic       *string `json:"profile_pic"`
+	DefaultAddressID *uint
 }
 
 type GoogleProfile struct {
@@ -29,6 +39,16 @@ type GoogleProfile struct {
 	Family_name    string
 	Picture        string
 	Locale         string
+}
+
+type Address struct {
+	utils.DefaultModel
+	UserID uint   `json:"user_id"`
+	User   *User  `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Street string `gorm:"type:varchar(100)" json:"street"`
+	City   string `gorm:"type:varchar(50)" json:"city"`
+	State  string `gorm:"type:varchar(50)" json:"state"`
+	Zip    string `gorm:"type:varchar(10)" json:"zip"`
 }
 
 var Roles = [2]string{string(Admin), string(Member)}

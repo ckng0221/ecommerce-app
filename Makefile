@@ -18,7 +18,7 @@ host_server_ngrok:
 # ---- Test on local ----
 # need to stripe login first
 server_stripe_test:
-	stripe listen --forward-to localhost:8000/payment/webhook
+	stripe listen --forward-to localhost:8000/payments/webhook
 
 trigger_stripe_payment:
 	stripe trigger payment_intent.succeeded

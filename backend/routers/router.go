@@ -6,7 +6,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
-	"github.com/go-chi/render"
 )
 
 func SetupRouter() *chi.Mux {
@@ -23,7 +22,7 @@ func SetupRouter() *chi.Mux {
 		AllowCredentials: false,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
-	r.Use(render.SetContentType(render.ContentTypeJSON))
+	// r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Use(middleware.Heartbeat("/ping"))
 
@@ -31,8 +30,10 @@ func SetupRouter() *chi.Mux {
 		w.Write([]byte("Hello Ecommerce App!"))
 	})
 
+	r.Mount("/users", UserRouter())
 	r.Mount("/products", ProductRouter())
-	r.Mount("/payment", PaymentRouter())
+	r.Mount("/orders", OrderRouter())
+	r.Mount("/payments", PaymentRouter())
 
 	return r
 }
