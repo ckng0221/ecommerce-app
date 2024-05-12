@@ -3,7 +3,6 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,7 +13,7 @@ import (
 func LoadEnv(requiredEnv []string) {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("failed to load .env file")
+		log.Println("failed to load .env file")
 	}
 	for _, envName := range requiredEnv {
 		env := os.Getenv(envName)

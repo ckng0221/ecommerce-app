@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"clevergo.tech/jsend"
@@ -46,7 +47,7 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 
 	result := initializers.Db.Model(&modelObj).Create(&modelObj)
 	if result.Error != nil {
-		fmt.Println(result.Error)
+		log.Println(result.Error)
 
 		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 		return
@@ -66,7 +67,7 @@ func GetById[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gor
 			jsend.Fail(w, "Record not found", http.StatusBadRequest)
 			return
 		}
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -113,7 +114,7 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 			jsend.Fail(w, "Record not found", http.StatusNotFound)
 			return
 		}
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -135,7 +136,7 @@ func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
 			return
 
 		}
-		fmt.Println(err)
+		log.Println(err)
 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -143,7 +144,7 @@ func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
 
 	result := initializers.Db.Delete(&modelObj, id)
 	if result.Error != nil {
-		fmt.Println(err)
+		log.Println(err)
 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

@@ -6,6 +6,7 @@ import (
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -56,7 +57,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		initializers.Db.Where("sub = ?", claims.Sub).First(&user)
 
 		if user.ID == 0 {
-			fmt.Println("User not found")
+			log.Println("User not found")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

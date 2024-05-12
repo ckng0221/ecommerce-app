@@ -81,7 +81,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 	err = initializers.Db.Find(&products, idList).Error
 	if err != nil {
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
@@ -130,10 +130,10 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 
 	params.AddMetadata("order_id", fmt.Sprint(checkoutRequestBody.OrderID))
 
-	// fmt.Println("param", params)
+	// log.Println("param", params)
 	result, err := session.New(params)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -145,7 +145,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 	}
 	err = initializers.Db.Model(&models.Payment{}).Create(&payment).Error
 	if err != nil {
-		fmt.Println("Failed to create payment in db")
+		log.Println("Failed to create payment in db")
 		return
 	}
 
@@ -180,11 +180,11 @@ func TriggerFakePaymentEvent(w http.ResponseWriter, r *http.Request) {
 	// Run the command
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		w.WriteHeader(500)
 		return
 	}
-	fmt.Println(out.String())
+	log.Println(out.String())
 
 	jsend.Success(w, map[string]string{"message": "Triggered payment event"}, http.StatusAccepted)
 }
@@ -198,7 +198,7 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	// fmt.Println("signature", r.Header.Get("Stripe-Signature"))
+	// log.Println("signature", r.Header.Get("Stripe-Signature"))
 
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 
@@ -214,7 +214,7 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 	err = processPaymentEvent(event)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -226,10 +226,10 @@ func processPaymentEvent(event stripe.Event) error {
 	switch event.Type {
 	case "checkout.session.completed":
 		var checkoutSession stripe.CheckoutSession
-		// fmt.Println("raw", string(event.Data.Raw))
+		// log.Println("raw", string(event.Data.Raw))
 		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 		if err != nil {
-			fmt.Println("Failed to parse event data raw.")
+			log.Println("Failed to parse event data raw.")
 			return err
 		}
 
@@ -242,7 +242,7 @@ func processPaymentEvent(event stripe.Event) error {
 		var order models.Order
 		err = initializers.Db.First(&order, orderID).Error
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return err
 		}
 
@@ -254,7 +254,7 @@ func processPaymentEvent(event stripe.Event) error {
 		// Update Order
 		err = initializers.Db.Model(&order).Updates(&orderUpdate).Error
 		if err != nil {
-			fmt.Println("Failed to update db")
+			log.Println("Failed to update db")
 			return err
 		}
 
@@ -268,7 +268,7 @@ func processPaymentEvent(event stripe.Event) error {
 
 		err = initializers.Db.Model(&payment).Where("stripe_session_id", stripeCheckoutSessionID).Updates(&paymentUpdate).Error
 		if err != nil {
-			fmt.Println("Failed to update db")
+			log.Println("Failed to update db")
 			return err
 		}
 	}

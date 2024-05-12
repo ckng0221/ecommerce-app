@@ -5,8 +5,8 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -56,8 +56,8 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	result := initializers.Db.Create(&user)
 
 	if result.Error != nil {
-		fmt.Println("failed to create user")
-		fmt.Println(result.Error)
+		log.Println("failed to create user")
+		log.Println(result.Error)
 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -107,11 +107,11 @@ func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	}
 	uID, _ := strconv.ParseUint(id, 10, 32)
 	address.UserID = uint(uID)
-	fmt.Println(address)
+	log.Println(address)
 
 	result := initializers.Db.Model(&models.Address{}).Create(&address)
 	if result.Error != nil {
-		fmt.Println(result.Error)
+		log.Println(result.Error)
 
 		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 		return

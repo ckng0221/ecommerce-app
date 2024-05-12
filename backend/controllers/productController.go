@@ -5,8 +5,8 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"clevergo.tech/jsend"
@@ -72,7 +72,7 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 		initializers.Db.First(&product, product.ID)
 
 		if result.Error != nil {
-			fmt.Println(result.Error)
+			log.Println(result.Error)
 			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -114,7 +114,7 @@ func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
 		initializers.Db.First(&product, product.ID)
 
 		if result.Error != nil {
-			fmt.Println(result.Error)
+			log.Println(result.Error)
 			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
