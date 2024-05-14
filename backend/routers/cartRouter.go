@@ -13,6 +13,8 @@ func CartRouter() *chi.Mux {
 
 	r.Post("/", controllers.CreateCarts())
 
+	r.Post("/add", controllers.CreateOrAddCart)
+
 	r.Get("/{id}", controllers.GetCartById)
 
 	r.Patch("/{id}", controllers.UpdateCartById())
