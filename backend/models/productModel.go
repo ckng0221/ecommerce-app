@@ -14,6 +14,7 @@ type Product struct {
 	Currency      string  `gorm:"type:char(3); default:myr" json:"currency"`
 	StockQuantity int     `gorm:"default:0" json:"stock_quantity"`
 	IsActive      bool    `gorm:"default:true" json:"is_active"`
+	ImagePath     string  `gorm:"type:varchar(500)" json:"image_path"`
 }
 
 type ProductUpdate struct {
@@ -23,4 +24,5 @@ type ProductUpdate struct {
 	Currency      *string          `json:"currency"`
 	StockQuantity *int             `json:"stock_quantity"`
 	IsActive      *bool            `json:"is_active"`
+	ImagePath     *string          `json:"image_path"`
 }
