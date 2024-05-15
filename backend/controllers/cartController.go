@@ -14,12 +14,14 @@ import (
 )
 
 func GetCarts(w http.ResponseWriter, r *http.Request) {
-	scope := utils.EmptyScope
+	scope := func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Product")
+	}
 
 	userId := r.URL.Query().Get("user_id")
 	if userId != "" {
 		scope = func(db *gorm.DB) *gorm.DB {
-			return db.Where("user_id = ?", userId)
+			return db.Preload("Product").Where("user_id = ?", userId)
 		}
 	}
 

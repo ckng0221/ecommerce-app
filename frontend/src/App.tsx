@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import Layout from "./pages/Layout";
 import ProductItem from "./pages/ProductItem";
 import { getCarts } from "./api/cart";
+import Carts from "./pages/Carts";
 
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
@@ -34,7 +35,14 @@ function App() {
           >
             {/* Public */}
             <Route index element={<Home carts={carts} setCarts={setCarts} />} />
-            <Route path="/products/:productId" element={<ProductItem />} />
+            <Route
+              path="/products/:productId"
+              element={<ProductItem carts={carts} setCarts={setCarts} />}
+            />
+            <Route
+              path="/carts"
+              element={<Carts carts={carts} setCarts={setCarts} />}
+            />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Footer from "../components/Footer";
 import NavBar from "../components/NavBar";
 import { ICart } from "../interfaces/cart";
+import { Toaster } from "react-hot-toast";
 
 interface IProps {
   carts: ICart[];
@@ -14,6 +15,7 @@ export default function Layout({ carts }: IProps) {
     <>
       <NavBar carts={carts} />
       <Outlet />
+      <Toaster position="top-center" />
       <br />
       <br />
       <Footer />

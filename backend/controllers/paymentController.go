@@ -97,7 +97,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	successUrl := fmt.Sprintf("%s/successful", frontend_base_url)
-	cancelUrl := fmt.Sprintf("%s/cancel", frontend_base_url)
+	cancelUrl := fmt.Sprintf("%s/carts", frontend_base_url)
 	lineItems := []*stripe.CheckoutSessionLineItemParams{}
 
 	// Convert to stripe slice
@@ -107,12 +107,20 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 			itemQuantity = checkoutItems[idx].Quantity
 		}
 
+		image := "null"
+		hostingDomain := os.Getenv("HOSTING_DOMAIN")
+		if product.ImagePath != "" && hostingDomain != "" {
+			image = fmt.Sprintf("%s%s", hostingDomain, product.ImagePath)
+		}
+		images := []*string{&image}
+
 		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
 			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
 				Currency: stripe.String(product.Currency),
 				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
 					Name:        stripe.String(product.Name),
 					Description: stripe.String(product.Description),
+					Images:      images,
 				},
 				UnitAmount: stripe.Int64(int64(product.UnitPrice * 100)),
 			},

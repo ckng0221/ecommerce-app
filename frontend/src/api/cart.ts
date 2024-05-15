@@ -1,3 +1,4 @@
+import { ICartUpdate } from "../interfaces/cart";
 import { getApi } from "./api";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
@@ -25,4 +26,10 @@ export async function getCartById(id: string) {
 export async function createOrAddCart(payload: unknown) {
   const endpoint = `${url}/add`;
   return await api.post(endpoint, payload);
+}
+
+export async function updateCartById(id: string, payload: ICartUpdate) {
+  const endpoint = `${url}/${id}`;
+
+  return await api.patch(endpoint, payload);
 }

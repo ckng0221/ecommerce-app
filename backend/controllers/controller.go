@@ -13,6 +13,7 @@ import (
 	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Model interface{}
@@ -102,7 +103,7 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = json.Unmarshal(body, &modelObj)
+	err = json.Unmarshal(body, &modelUpdateObj)
 	if err != nil {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
@@ -118,8 +119,8 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	initializers.Db.Model(&modelObj).Updates(&modelUpdateObj)
-
+	initializers.Db.Clauses(clause.Returning{}).Model(&modelObj).Updates(&modelUpdateObj)
+	fmt.Println("lalal")
 	jsend.Success(w, &modelObj)
 
 }

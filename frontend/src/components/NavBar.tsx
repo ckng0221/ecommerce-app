@@ -7,6 +7,7 @@ import IconButton from "@mui/material/IconButton";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { Link } from "react-router-dom";
+import { getGoogleLoginUrl } from "../api/auth";
 import { ICart } from "../interfaces/cart";
 import Cart from "./Cart";
 
@@ -17,6 +18,13 @@ export default function NavBar({
   carts: ICart[];
   // setCarts: Dispatch<SetStateAction<ICart[]>>;
 }) {
+  async function loginAction() {
+    const res = await getGoogleLoginUrl();
+    const url = res.data?.data?.url;
+
+    window.location.replace(url);
+  }
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="fixed" color="primary">
@@ -38,12 +46,14 @@ export default function NavBar({
           {/* Cart */}
           <Tooltip title="View Cart">
             <IconButton>
-              <Link to="cart">
+              <Link to="/carts">
                 <Cart cartItems={carts} />
               </Link>
             </IconButton>
           </Tooltip>
-          <Button color="inherit">Login</Button>
+          <Button color="inherit" onClick={loginAction}>
+            Login
+          </Button>
         </Toolbar>
       </AppBar>
     </Box>
