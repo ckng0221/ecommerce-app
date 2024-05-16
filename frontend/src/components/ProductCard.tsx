@@ -27,7 +27,7 @@ export default function ProductCard({
     : "/unknown-product.png";
 
   return (
-    <Card sx={{ maxWidth: 345 }}>
+    <Card sx={{ maxWidth: 200 }}>
       <CardActionArea component={Link} to={`/products/${product.id}`}>
         <CardMedia
           component="img"

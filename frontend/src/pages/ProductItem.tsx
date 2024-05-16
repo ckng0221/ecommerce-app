@@ -1,3 +1,4 @@
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import {
   Button,
   Card,
@@ -9,21 +10,40 @@ import {
   Typography,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getProductById } from "../api/product";
 import { ICart } from "../interfaces/cart";
 import { IProduct } from "../interfaces/product";
 import { addToCart } from "../utils/common";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { ICheckoutItem } from "../interfaces/checkout";
 
 const userId = ""; // FIXME:
 interface IProps {
   carts: ICart[];
   setCarts: Dispatch<SetStateAction<ICart[]>>;
+  // checkoutItems: ICheckoutItem[];
+  setCheckoutItems: Dispatch<SetStateAction<ICheckoutItem[]>>;
 }
 
-export default function ProductItem({ carts, setCarts }: IProps) {
+export default function ProductItem({
+  carts,
+  setCarts,
+  // checkoutItems,
+  setCheckoutItems,
+}: IProps) {
   const { productId } = useParams();
+  const navigate = useNavigate();
+
+  function updateCheckout() {
+    if (productId) {
+      setCheckoutItems([
+        // ...checkoutItems,
+        { product_id: productId, quantity: 1 },
+      ]);
+      navigate("/checkout");
+    }
+  }
+
   const [product, setProduct] = useState<IProduct>({
     id: "",
     name: "",
@@ -90,7 +110,7 @@ export default function ProductItem({ carts, setCarts }: IProps) {
               <ShoppingCartIcon color="action" />
             </IconButton>
           </Tooltip>
-          <Button size="small" color="primary">
+          <Button size="small" color="primary" onClick={updateCheckout}>
             Check Out
           </Button>
         </div>
