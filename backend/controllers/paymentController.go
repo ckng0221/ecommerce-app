@@ -19,6 +19,7 @@ import (
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/webhook"
+	"gorm.io/gorm/clause"
 )
 
 type CheckoutItem struct {
@@ -46,35 +47,43 @@ func (c *CheckoutItem) validate() url.Values {
 // Create Payment session in Stripe
 func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 	type CheckoutRequestBody struct {
-		OrderID       uint           `json:"order_id"`
+		AddressID     uint           `json:"address_id"`
+		UserID        uint           `json:"user_id"`
 		CheckoutItems []CheckoutItem `json:"checkout_items"`
 	}
 
 	var checkoutRequestBody CheckoutRequestBody
-	var products []models.Product
-	var idList []uint
 
+	// Create order first
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
-
 		return
 	}
 
 	err = json.Unmarshal(body, &checkoutRequestBody)
 	if err != nil {
-		jsend.Fail(w, "Failed to parse request body", http.StatusBadRequest)
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
+	order := models.Order{AddressID: checkoutRequestBody.AddressID, UserID: checkoutRequestBody.UserID}
+	dbResult := initializers.Db.Clauses(clause.Returning{}).Create(&order)
+	if dbResult.Error != nil {
+
+		log.Println(dbResult.Error)
+
+		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
+		return
+	}
+
+	// Create Order Item
+	var orderItems = []models.OrderItem{}
 	checkoutItems := checkoutRequestBody.CheckoutItems
 
+	var products []models.Product
+	var idList []uint
 	// Process request body
 	for _, item := range checkoutItems {
-		if validErrs := item.validate(); len(validErrs) > 0 {
-			err := map[string]interface{}{"message": validErrs}
-			jsend.Fail(w, err, http.StatusBadRequest)
-			return
-		}
 		idList = append(idList, item.ProductID)
 	}
 
@@ -93,6 +102,24 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	for idx, item := range checkoutItems {
+		// Validate
+		if validErrs := item.validate(); len(validErrs) > 0 {
+			err := map[string]interface{}{"message": validErrs}
+			jsend.Fail(w, err, http.StatusBadRequest)
+			return
+		}
+
+		orderItems = append(orderItems, models.OrderItem{
+			OrderID:   order.ID,
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			Price:     products[idx].UnitPrice,
+			Currency:  products[idx].Currency,
+		})
+	}
+	initializers.Db.Create(&orderItems)
 
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
 	stripe.Key = os.Getenv("STRIPE_KEY")
@@ -136,7 +163,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 	}
 
-	params.AddMetadata("order_id", fmt.Sprint(checkoutRequestBody.OrderID))
+	params.AddMetadata("order_id", fmt.Sprint(order.ID))
 
 	// log.Println("param", params)
 	result, err := session.New(params)
@@ -148,7 +175,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 
 	// Create Payment record
 	var payment = models.Payment{
-		OrderID:         checkoutRequestBody.OrderID,
+		OrderID:         order.ID,
 		StripeSessionID: result.ID,
 	}
 	err = initializers.Db.Model(&models.Payment{}).Create(&payment).Error
