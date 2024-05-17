@@ -1,4 +1,6 @@
+import { IProduct } from "./product";
+
 export interface ICheckoutItem {
-  product_id: string;
+  product: IProduct;
   quantity: number;
 }

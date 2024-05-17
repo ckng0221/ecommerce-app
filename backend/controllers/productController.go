@@ -67,15 +67,14 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		expression := "stock_quantity - ?"
-
 		result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, stockUpdate.Quantity))
-		initializers.Db.First(&product, product.ID)
 
 		if result.Error != nil {
 			log.Println(result.Error)
 			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		initializers.Db.First(&product, product.ID)
 
 		jsend.Success(w, map[string]int{"stock_quantity": product.StockQuantity})
 	}

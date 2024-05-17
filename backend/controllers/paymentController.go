@@ -275,7 +275,7 @@ func processPaymentEvent(event stripe.Event) error {
 
 		// Further processing based on metadata...
 		var order models.Order
-		err = initializers.Db.First(&order, orderID).Error
+		err = initializers.Db.Preload("OrderItems").First(&order, orderID).Error
 		if err != nil {
 			log.Println(err)
 			return err

@@ -120,7 +120,6 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	initializers.Db.Clauses(clause.Returning{}).Model(&modelObj).Updates(&modelUpdateObj)
-	fmt.Println("lalal")
 	jsend.Success(w, &modelObj)
 
 }

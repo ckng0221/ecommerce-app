@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { getCarts, updateCartById } from "../api/cart";
 import QuantityInput from "../components/QuantityInput";
 import { ICart } from "../interfaces/cart";
+import { addProductStock, consumeProductStock } from "../api/product";
 
 interface IProps {
   carts: ICart[];
@@ -20,6 +21,7 @@ interface IProps {
 const userID = "1"; //FIXME:
 
 export default function Cart({ carts, setCarts }: IProps) {
+  const [stateVal, setStateVal] = useState<number>(0);
   useEffect(() => {
     async function loadData() {
       const res = await getCarts(userID);
@@ -28,18 +30,21 @@ export default function Cart({ carts, setCarts }: IProps) {
         setCarts(data);
       }
     }
+
     loadData();
-  }, [setCarts]);
+  }, [stateVal, setCarts]);
 
   return (
     <>
       {carts.map((cart, idx) => {
         return (
-          <>
-            <div className="m-4" key={idx}>
-              <CartItem cart={cart} />
-            </div>
-          </>
+          <div className="m-4" key={idx}>
+            <CartItem
+              cart={cart}
+              setStateVal={setStateVal}
+              stateVal={stateVal}
+            />
+          </div>
         );
       })}
       <div className="pr-4">
@@ -51,7 +56,15 @@ export default function Cart({ carts, setCarts }: IProps) {
   );
 }
 
-function CartItem({ cart }: { cart: ICart }) {
+function CartItem({
+  cart,
+  stateVal,
+  setStateVal,
+}: {
+  cart: ICart;
+  stateVal: number;
+  setStateVal: Dispatch<SetStateAction<number>>;
+}) {
   const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
   const imagePath = cart?.product?.image_path
     ? `${BASE_URL}${cart?.product?.image_path}`
@@ -63,6 +76,14 @@ function CartItem({ cart }: { cart: ICart }) {
     setValue(val);
     if (cart.id && val) {
       updateCartById(cart.id, { quantity: val });
+      setStateVal(stateVal + 1);
+      // When clicking add button
+      if (value && val > value) {
+        consumeProductStock(String(cart.product_id), { stock_quantity: 1 });
+      } else {
+        // When clicking minus button
+        addProductStock(String(cart.product_id), { stock_quantity: 1 });
+      }
     }
   }
 
@@ -95,6 +116,7 @@ function CartItem({ cart }: { cart: ICart }) {
                 value={value}
                 setValue={setValue}
                 onChangeEvent={changeQuantity}
+                max={cart.product?.stock_quantity}
               />
             </CardContent>
           </div>

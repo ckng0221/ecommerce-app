@@ -49,7 +49,7 @@ export default function ProductCard({
         <IconButton
           aria-label="add to cart"
           onClick={() => {
-            addToCart(carts, setCarts, product.id, userId);
+            addToCart(carts, setCarts, product.id, userId, 1);
           }}
         >
           <ShoppingCartIcon />

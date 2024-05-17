@@ -28,6 +28,7 @@ const NumberInput = React.forwardRef(function CustomNumberInput(
           children: <RemoveIcon fontSize="small" />,
         },
       }}
+      readOnly
       {...props}
       ref={ref}
     />
@@ -38,6 +39,7 @@ export default function QuantityInput({
   value,
   setValue,
   onChangeEvent = undefined,
+  max,
 }: {
   value: number | null;
   setValue: React.Dispatch<React.SetStateAction<number | null>>;
@@ -50,6 +52,7 @@ export default function QuantityInput({
         value: number | null
       ) => void)
     | undefined;
+  max: number | undefined;
 }) {
   if (onChangeEvent === undefined) {
     onChangeEvent = (event, val) => setValue(val);
@@ -58,7 +61,7 @@ export default function QuantityInput({
     <NumberInput
       aria-label="Quantity Input"
       min={1}
-      //   max={}
+      max={max}
       value={value}
       onChange={onChangeEvent}
     />

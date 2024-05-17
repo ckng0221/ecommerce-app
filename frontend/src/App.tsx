@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { getCarts } from "./api/cart";
 import { ICart } from "./interfaces/cart";
 import { ICheckoutItem } from "./interfaces/checkout";
+import { IUser } from "./interfaces/user";
 import Carts from "./pages/Carts";
 import Checkout from "./pages/Checkout";
 import Home from "./pages/Home";
@@ -13,6 +15,22 @@ import ProductItem from "./pages/ProductItem";
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
   const [checkoutItems, setCheckoutItems] = useState<ICheckoutItem[]>([]);
+  const [user, setUser] = useState<IUser>({
+    id: "",
+    name: "",
+    password: "",
+    role: "",
+    profile_pric: "",
+    sub: "",
+    default_address_id: "",
+    default_address: {
+      street: "",
+      city: "",
+      state: "",
+      zip: "",
+    },
+    carts: [],
+  });
 
   // FIXME: get user_id based on authentication
   const userID = "";
@@ -21,6 +39,7 @@ function App() {
     async function loadData() {
       if (!userID) return;
 
+      // NOTE: get carts separately, as carts can change easily
       const data = await getCarts(userID);
       if (data) {
         setCarts(data?.data?.data);
@@ -35,7 +54,7 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<Layout carts={carts} setCarts={setCarts} />}
+            element={<Layout user={user} carts={carts} setCarts={setCarts} />}
           >
             {/* Public */}
             <Route index element={<Home carts={carts} setCarts={setCarts} />} />
@@ -58,6 +77,7 @@ function App() {
               path="/checkout"
               element={
                 <Checkout
+                  user={user}
                   checkoutItems={checkoutItems}
                   setCheckoutItems={setCheckoutItems}
                 />

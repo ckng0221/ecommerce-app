@@ -2,17 +2,19 @@ import { Dispatch, SetStateAction } from "react";
 import { toast } from "react-hot-toast";
 import { createOrAddCart } from "../api/cart";
 import { ICart } from "../interfaces/cart";
+import { consumeProductStock } from "../api/product";
 
 /**
  * Add to cart
  * Allow guest to add cart, but require to login when want to checkout
  * @param productId
  */
-export function addToCart(
+export async function addToCart(
   carts: ICart[],
   setCarts: Dispatch<SetStateAction<ICart[]>>,
   productId: string | undefined,
-  userId: string
+  userId: string,
+  productQuantity: number
 ) {
   if (!productId) {
     console.error("Absence of product ID");
@@ -21,9 +23,9 @@ export function addToCart(
 
   // New cart obj
   const cartObj: ICart = {
-    product_id: productId,
-    quantity: 1,
-    user_id: userId,
+    product_id: Number(productId),
+    quantity: productQuantity,
+    user_id: Number(userId),
   };
   // check if cart item exists
   const existingCartIdx = carts.findIndex((cart) => {
@@ -39,9 +41,15 @@ export function addToCart(
     const cartsNew = [...carts, cartObj];
     setCarts(cartsNew);
   }
+  console.log("user", userId);
 
+  let res;
   if (userId) {
-    createOrAddCart(cartObj);
+    res = await createOrAddCart(cartObj);
   }
-  toast.success("Added to cart!", { duration: 500 });
+  // consume stock
+  if (res?.data.status === "success") {
+    await consumeProductStock(productId, { stock_quantity: productQuantity });
+  }
+  toast.success("Added to cart!");
 }

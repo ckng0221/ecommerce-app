@@ -1,3 +1,4 @@
+import { IProductStock } from "../interfaces/product";
 import { getApi } from "./api";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
@@ -18,5 +19,15 @@ export async function getProductById(id: string) {
 
 export async function createProduct(payload: unknown) {
   const endpoint = url;
+  return await api.post(endpoint, payload);
+}
+
+export async function consumeProductStock(id: string, payload: IProductStock) {
+  const endpoint = `${url}/${id}/stocks/consume`;
+  return await api.post(endpoint, payload);
+}
+
+export async function addProductStock(id: string, payload: IProductStock) {
+  const endpoint = `${url}/${id}/stocks/add`;
   return await api.post(endpoint, payload);
 }
