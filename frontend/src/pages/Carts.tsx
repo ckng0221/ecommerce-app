@@ -18,32 +18,13 @@ interface IProps {
   setCarts: Dispatch<SetStateAction<ICart[]>>;
 }
 
-const userID = "1"; //FIXME:
-
 export default function Cart({ carts, setCarts }: IProps) {
-  const [stateVal, setStateVal] = useState<number>(0);
-  useEffect(() => {
-    async function loadData() {
-      const res = await getCarts(userID);
-      const data = res?.data.data;
-      if (data) {
-        setCarts(data);
-      }
-    }
-
-    loadData();
-  }, [stateVal, setCarts]);
-
   return (
     <>
       {carts.map((cart, idx) => {
         return (
           <div className="m-4" key={idx}>
-            <CartItem
-              cart={cart}
-              setStateVal={setStateVal}
-              stateVal={stateVal}
-            />
+            <CartItem cart={cart} carts={carts} setCarts={setCarts} />
           </div>
         );
       })}
@@ -58,12 +39,12 @@ export default function Cart({ carts, setCarts }: IProps) {
 
 function CartItem({
   cart,
-  stateVal,
-  setStateVal,
+  carts,
+  setCarts,
 }: {
   cart: ICart;
-  stateVal: number;
-  setStateVal: Dispatch<SetStateAction<number>>;
+  carts: ICart[];
+  setCarts: Dispatch<SetStateAction<ICart[]>>;
 }) {
   const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
   const imagePath = cart?.product?.image_path
@@ -75,8 +56,16 @@ function CartItem({
   function changeQuantity(event: any, val: number | null) {
     setValue(val);
     if (cart.id && val) {
+      const newCarts = carts.map((c) => {
+        if (c.id == cart.id) {
+          cart.quantity = val;
+        }
+        return c;
+      });
+      setCarts(newCarts);
+
       updateCartById(cart.id, { quantity: val });
-      setStateVal(stateVal + 1);
+
       // When clicking add button
       if (value && val > value) {
         consumeProductStock(String(cart.product_id), { stock_quantity: 1 });

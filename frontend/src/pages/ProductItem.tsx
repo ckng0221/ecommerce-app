@@ -18,9 +18,10 @@ import { ICart } from "../interfaces/cart";
 import { ICheckoutItem } from "../interfaces/checkout";
 import { IProduct } from "../interfaces/product";
 import { addToCart } from "../utils/common";
+import { IUser } from "../interfaces/user";
 
-const userId = "1"; // FIXME:
 interface IProps {
+  user: IUser;
   carts: ICart[];
   setCarts: Dispatch<SetStateAction<ICart[]>>;
   // checkoutItems: ICheckoutItem[];
@@ -28,6 +29,7 @@ interface IProps {
 }
 
 export default function ProductItem({
+  user,
   carts,
   setCarts,
   // checkoutItems,
@@ -139,7 +141,7 @@ export default function ProductItem({
                             carts,
                             setCarts,
                             productId,
-                            userId,
+                            user.id,
                             checkoutQty
                           );
                         }

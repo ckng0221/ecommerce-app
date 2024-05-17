@@ -9,14 +9,15 @@ import { Link } from "react-router-dom";
 import { ICart } from "../interfaces/cart";
 import { IProduct } from "../interfaces/product";
 import { addToCart } from "../utils/common";
-
-const userId = ""; // FIXME: put actual user later
+import { IUser } from "../interfaces/user";
 
 export default function ProductCard({
+  user,
   product,
   carts,
   setCarts,
 }: {
+  user: IUser;
   product: IProduct;
   carts: ICart[];
   setCarts: Dispatch<SetStateAction<ICart[]>>;
@@ -49,7 +50,7 @@ export default function ProductCard({
         <IconButton
           aria-label="add to cart"
           onClick={() => {
-            addToCart(carts, setCarts, product.id, userId, 1);
+            addToCart(carts, setCarts, product.id, user.id, 1);
           }}
         >
           <ShoppingCartIcon />

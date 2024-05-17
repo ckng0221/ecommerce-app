@@ -11,6 +11,7 @@ import Checkout from "./pages/Checkout";
 import Home from "./pages/Home";
 import Layout from "./pages/Layout";
 import ProductItem from "./pages/ProductItem";
+import { getUserById } from "./api/user";
 
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
@@ -32,21 +33,29 @@ function App() {
     carts: [],
   });
 
-  // FIXME: get user_id based on authentication
-  const userID = "";
-
   useEffect(() => {
     async function loadData() {
-      if (!userID) return;
+      //TODO: Fetch user
+
+      //FIXME: fake get user based on cookie
+      const res = await getUserById("1");
+
+      if (res.data?.status === "success") {
+        setUser(res.data?.data);
+      } else {
+        return;
+      }
+
+      if (!user.id) return;
 
       // NOTE: get carts separately, as carts can change easily
-      const data = await getCarts(userID);
+      const data = await getCarts(user.id);
       if (data) {
         setCarts(data?.data?.data);
       }
     }
     loadData();
-  }, []);
+  }, [user.id]);
 
   return (
     <>
@@ -57,11 +66,15 @@ function App() {
             element={<Layout user={user} carts={carts} setCarts={setCarts} />}
           >
             {/* Public */}
-            <Route index element={<Home carts={carts} setCarts={setCarts} />} />
+            <Route
+              index
+              element={<Home user={user} carts={carts} setCarts={setCarts} />}
+            />
             <Route
               path="/products/:productId"
               element={
                 <ProductItem
+                  user={user}
                   carts={carts}
                   setCarts={setCarts}
                   // checkoutItems={checkoutItems}

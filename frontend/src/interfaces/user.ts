@@ -12,7 +12,8 @@ export interface IUser {
   carts?: ICart[];
 }
 
-interface IAddress {
+export interface IAddress {
+  id?: string | number;
   street: string;
   city: string;
   state: string;

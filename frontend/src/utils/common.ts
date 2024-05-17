@@ -33,7 +33,7 @@ export async function addToCart(
   });
 
   if (existingCartIdx != -1) {
-    carts[existingCartIdx].quantity++;
+    carts[existingCartIdx].quantity += productQuantity;
     setCarts(carts);
   } else {
     // if item not exist in cart

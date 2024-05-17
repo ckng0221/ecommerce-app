@@ -5,9 +5,9 @@ import {
   CardMedia,
   Typography,
 } from "@mui/material";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { ICheckoutItem } from "../interfaces/checkout";
-import { IUser } from "../interfaces/user";
+import { IAddress, IUser } from "../interfaces/user";
 
 interface IProps {
   user: IUser;
@@ -20,7 +20,13 @@ export default function Checkout({
   checkoutItems,
   setCheckoutItems,
 }: IProps) {
-  const [addressId, setAddressId] = useState(user.default_address_id);
+  const [address, setAddress] = useState<IAddress>({
+    id: user.default_address?.id,
+    street: user.default_address?.street || "",
+    city: user.default_address?.city || "",
+    state: user.default_address?.state || "",
+    zip: user.default_address?.zip || "",
+  });
 
   // Compute
   let totalPrice = 0;
@@ -38,10 +44,13 @@ export default function Checkout({
             <div>
               Address:
               <br />
-              {user?.default_address?.street}
-              {user?.default_address?.city}
-              {user?.default_address?.state}
-              {user?.default_address?.zip}
+              {address.street}
+              <br />
+              {address.city}
+              <br />
+              {address.state}
+              <br />
+              {address.zip}
             </div>
           </div>{" "}
           {checkoutItems.map((checkoutItem, idx) => {
