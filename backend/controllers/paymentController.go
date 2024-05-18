@@ -123,7 +123,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
 	stripe.Key = os.Getenv("STRIPE_KEY")
-	successUrl := fmt.Sprintf("%s/successful", frontend_base_url)
+	successUrl := fmt.Sprintf("%s/orders", frontend_base_url)
 	cancelUrl := fmt.Sprintf("%s/carts", frontend_base_url)
 	lineItems := []*stripe.CheckoutSessionLineItemParams{}
 

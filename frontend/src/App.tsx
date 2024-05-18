@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Layout from "./pages/Layout";
 import ProductItem from "./pages/ProductItem";
 import { getUserById } from "./api/user";
+import Orders from "./pages/Orders";
 
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
@@ -96,6 +97,7 @@ function App() {
                 />
               }
             />
+            <Route path="/orders" element={<Orders user={user} />} />
           </Route>
         </Routes>
       </BrowserRouter>

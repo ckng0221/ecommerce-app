@@ -9,12 +9,17 @@ import (
 )
 
 func GetOrders(w http.ResponseWriter, r *http.Request) {
+	scope := utils.EmptyScope
 
-	GetAll[models.Order](w, r, utils.EmptyScope)
-
+	userId := r.URL.Query().Get("user_id")
+	if userId != "" {
+		scope = func(db *gorm.DB) *gorm.DB {
+			return db.Preload("OrderItems.Product").Where("user_id = ?", userId)
+		}
+	}
+	GetAll[models.Order](w, r, scope)
 }
 
-// TODO: need to create a page in frontend for creating order first, then only proceed to payment
 func CreateOrders() func(w http.ResponseWriter, r *http.Request) {
 	return CreateOne[models.Order]
 }
