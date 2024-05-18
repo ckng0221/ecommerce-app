@@ -6,8 +6,10 @@ import {
   Typography,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
+import { createPaymentCheckout } from "../api/payment";
 import { ICheckoutItem } from "../interfaces/checkout";
 import { IAddress, IUser } from "../interfaces/user";
+import { toast } from "react-hot-toast";
 
 interface IProps {
   user: IUser;
@@ -35,6 +37,28 @@ export default function Checkout({
     const quantity = checkoutItems[i].quantity;
     totalPrice += unit_price * quantity;
   }
+
+  // Payment
+  async function performPaymentCheckout() {
+    let res;
+    try {
+      const checkoutItemsMod = checkoutItems.map((item) => {
+        return { product_id: item.product.id, quantity: item.quantity };
+      });
+      res = await createPaymentCheckout({
+        address_id: address.id || 0,
+        user_id: user.id,
+        checkout_items: checkoutItemsMod,
+      });
+      if (res.status === 200) {
+        const paymentUrl = res.data?.data.url;
+        window.location = paymentUrl;
+      }
+    } catch (err) {
+      toast.error("failed to checkout");
+    }
+  }
+
   return (
     <>
       {checkoutItems.length > 0 ? (
@@ -68,7 +92,9 @@ export default function Checkout({
               </span>{" "}
             </div>
             <div>
-              <Button variant="contained">Proceed to payment</Button>
+              <Button variant="contained" onClick={performPaymentCheckout}>
+                Proceed to payment
+              </Button>
             </div>
           </div>
         </>
