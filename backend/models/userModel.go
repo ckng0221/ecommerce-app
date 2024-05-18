@@ -19,9 +19,9 @@ type User struct {
 	Role             Role     `gorm:"type:enum('admin', 'member'); default:member" json:"role"`
 	ProfilePic       *string  `gorm:"type:varchar(255)" json:"profile_pic"`
 	Sub              *string  `gorm:"type:varchar(100); unique" json:"sub"`
-	DefaultAddressID *uint    `json:"default_address_id"`
-	DefaultAddress   *Address `json:"default_address,omitempty"`
 	Carts            *[]Cart  `gorm:"foreignKey:UserID" json:"carts,omitempty"`
+	DefaultAddressID *uint    `json:"default_address_id"`
+	DefaultAddress   *Address `gorm:"foreignKey:DefaultAddressID" json:"default_address,omitempty"`
 }
 type UserUpdate struct {
 	Name             *string `json:"name"`
@@ -51,12 +51,14 @@ type GoogleProfile struct {
 
 type Address struct {
 	utils.DefaultModel
-	UserID uint   `json:"user_id"`
-	User   *User  `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Street string `gorm:"type:varchar(100)" json:"street"`
-	City   string `gorm:"type:varchar(50)" json:"city"`
-	State  string `gorm:"type:varchar(50)" json:"state"`
-	Zip    string `gorm:"type:varchar(10)" json:"zip"`
+	UserID        uint   `json:"user_id"`
+	User          *User  `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Street        string `gorm:"type:varchar(100)" json:"street"`
+	City          string `gorm:"type:varchar(50)" json:"city"`
+	State         string `gorm:"type:varchar(50)" json:"state"`
+	Zip           string `gorm:"type:varchar(10)" json:"zip"`
+	ContactNumber string `gorm:"type:varchar(20)" json:"contact_number"`
+	UserDefault   *User  `gorm:"foreignKey:DefaultAddressID"`
 }
 
 var Roles = [2]string{string(Admin), string(Member)}

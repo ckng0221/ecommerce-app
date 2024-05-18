@@ -26,36 +26,38 @@ export default function NavBar({
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="fixed" color="primary">
-        <Toolbar>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            <Link className="text-white hover:text-black" to="/">
-              Ecommerce App
-            </Link>
-          </Typography>
-          {/* Cart */}
-          <Tooltip title="View Cart">
-            <IconButton>
-              <Link to="/carts">
-                <Cart cartItems={carts} />
-              </Link>
+    <div className="mb-12">
+      <Box sx={{ flexGrow: 1 }}>
+        <AppBar position="fixed" color="primary">
+          <Toolbar>
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
             </IconButton>
-          </Tooltip>
-          <Button color="inherit" onClick={loginAction}>
-            Login
-          </Button>
-        </Toolbar>
-      </AppBar>
-    </Box>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              <Link className="text-white hover:text-black" to="/">
+                Ecommerce App
+              </Link>
+            </Typography>
+            {/* Cart */}
+            <Tooltip title="View Cart">
+              <IconButton>
+                <Link to="/carts">
+                  <Cart cartItems={carts} />
+                </Link>
+              </IconButton>
+            </Tooltip>
+            <Button color="inherit" onClick={loginAction}>
+              Login
+            </Button>
+          </Toolbar>
+        </AppBar>
+      </Box>
+    </div>
   );
 }

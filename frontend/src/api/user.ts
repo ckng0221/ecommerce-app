@@ -10,3 +10,13 @@ export async function getUserById(id: string) {
 
   return await api.get(endpoint);
 }
+
+export async function getUserAddresses(userId: string) {
+  try {
+    const endpoint = `${url}/${userId}/addresses`;
+
+    return await api.get(endpoint);
+  } catch (err) {
+    console.error(err);
+  }
+}

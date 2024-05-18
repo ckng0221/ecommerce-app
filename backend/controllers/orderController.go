@@ -14,7 +14,7 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 	if userId != "" {
 		scope = func(db *gorm.DB) *gorm.DB {
-			return db.Preload("OrderItems.Product").Where("user_id = ?", userId)
+			return db.Preload("Address").Preload("OrderItems.Product").Where("user_id = ?", userId).Order("id desc")
 		}
 	}
 	GetAll[models.Order](w, r, scope)

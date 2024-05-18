@@ -5,11 +5,13 @@ import {
   CardMedia,
   Typography,
 } from "@mui/material";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { createPaymentCheckout } from "../api/payment";
 import { ICheckoutItem } from "../interfaces/checkout";
 import { IAddress, IUser } from "../interfaces/user";
 import { toast } from "react-hot-toast";
+import BasicSelect from "../components/BasicSelect";
+import { getUserAddresses } from "../api/user";
 
 interface IProps {
   user: IUser;
@@ -22,13 +24,22 @@ export default function Checkout({
   checkoutItems,
   setCheckoutItems,
 }: IProps) {
-  const [address, setAddress] = useState<IAddress>({
-    id: user.default_address?.id,
-    street: user.default_address?.street || "",
-    city: user.default_address?.city || "",
-    state: user.default_address?.state || "",
-    zip: user.default_address?.zip || "",
-  });
+  const [addresses, setAddresses] = useState<IAddress[]>([]);
+  const [addressId, setAddressId] = useState<string>(user.default_address_id);
+
+  useEffect(() => {
+    async function loadData() {
+      const res = await getUserAddresses(user.id);
+      if (res?.data.status === "success") {
+        setAddresses(res.data?.data);
+      }
+    }
+    loadData();
+  }, [user.id]);
+
+  function handleAddressChange(event: any) {
+    setAddressId(event.target.value as string);
+  }
 
   // Compute
   let totalPrice = 0;
@@ -46,7 +57,7 @@ export default function Checkout({
         return { product_id: item.product.id, quantity: item.quantity };
       });
       res = await createPaymentCheckout({
-        address_id: address.id || 0,
+        address_id: addressId || 0,
         user_id: user.id,
         checkout_items: checkoutItemsMod,
       });
@@ -66,15 +77,12 @@ export default function Checkout({
           <div className="mb-8">
             <div>Receiver: {user.name}</div>
             <div>
-              Address:
-              <br />
-              {address.street}
-              <br />
-              {address.city}
-              <br />
-              {address.state}
-              <br />
-              {address.zip}
+              <BasicSelect
+                options={addresses}
+                value={addressId}
+                label="Address"
+                handleChange={handleAddressChange}
+              />
             </div>
           </div>{" "}
           {checkoutItems.map((checkoutItem, idx) => {

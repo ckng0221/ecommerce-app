@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 import { getOrders } from "../api/order";
 import { IOrder, IOrderItem } from "../interfaces/order";
 import { IUser } from "../interfaces/user";
-
+import dayjs from "dayjs";
 interface IProps {
   user: IUser;
 }
@@ -30,7 +30,7 @@ export default function Orders({ user }: IProps) {
       {/* {JSON.stringify(orders)} */}
       {orders.map((order) => {
         return (
-          <div key={order.id}>
+          <div key={order.id} className="mb-4">
             <Order order={order} />
           </div>
         );
@@ -40,17 +40,41 @@ export default function Orders({ user }: IProps) {
 }
 
 function Order({ order }: { order: IOrder }) {
+  function getTotalPrice(order: IOrder) {
+    const orderItems = order?.order_items;
+    let totalPrice = 0;
+    for (let i = 0; i < orderItems?.length; i++) {
+      const item = orderItems[i];
+      totalPrice += item.price * item.quantity;
+    }
+    return totalPrice;
+  }
+  const orderDate = dayjs(order?.created_at).format("DD/MM/YYYY hh:mm A");
+
+  const totalPrice = getTotalPrice(order);
+  const currency = order?.order_items?.[0].currency.toUpperCase();
+
   return (
-    <>
-      OrderID: {order.id}
-      <br />
-      Status: {order.order_status}
+    <div className="border border-solid border-4">
+      <div className="mb-4">
+        <div className="mb-2">Order ID: {order.id}</div>
+        <div className="mb-2">Order Date: {orderDate}</div>
+
+        <div className="mb-2"> Status: {order.order_status}</div>
+      </div>
       {order?.order_items?.map((item) => (
-        <div key={item.id} className="mb-4">
+        <div key={item.id} className="mb-4 border border-dashed">
           <OrderItem orderItem={item} />
         </div>
       ))}
-    </>
+      <div className="mb-2">
+        {" "}
+        Total:{" "}
+        <b>
+          {currency} {totalPrice}
+        </b>
+      </div>
+    </div>
   );
 }
 
@@ -77,9 +101,6 @@ function OrderItem({ orderItem }: { orderItem: IOrderItem }) {
               <CardContent>
                 <Typography gutterBottom variant="h5" component="div">
                   {orderItem.product?.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {orderItem.product?.description}
                 </Typography>
                 <br />
                 <Typography variant="body2" color="text.secondary">

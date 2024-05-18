@@ -79,7 +79,8 @@ func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
-	var scope = func(db *gorm.DB) *gorm.DB {
+	scope := utils.EmptyScope
+	scope = func(db *gorm.DB) *gorm.DB {
 		return db.Preload("DefaultAddress")
 	}
 

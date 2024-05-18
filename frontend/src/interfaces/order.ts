@@ -10,6 +10,7 @@ export interface IOrder {
   payment_at: string;
   order_status: string;
   order_items: IOrderItem[];
+  created_at?: string;
 }
 
 export interface IOrderItem {
