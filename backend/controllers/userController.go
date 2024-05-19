@@ -81,7 +81,7 @@ func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
 func GetUserById(w http.ResponseWriter, r *http.Request) {
 	scope := utils.EmptyScope
 	scope = func(db *gorm.DB) *gorm.DB {
-		return db.Preload("DefaultAddress")
+		return db.Joins("DefaultAddress")
 	}
 
 	GetById[models.User](w, r, scope)

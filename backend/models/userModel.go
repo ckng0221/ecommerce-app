@@ -58,7 +58,6 @@ type Address struct {
 	State         string `gorm:"type:varchar(50)" json:"state"`
 	Zip           string `gorm:"type:varchar(10)" json:"zip"`
 	ContactNumber string `gorm:"type:varchar(20)" json:"contact_number"`
-	UserDefault   *User  `gorm:"foreignKey:DefaultAddressID"`
 }
 
 var Roles = [2]string{string(Admin), string(Member)}

@@ -54,6 +54,7 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 
 	var checkoutRequestBody CheckoutRequestBody
 
+	//TODO: Separate Out this, to have option to do payment for existing order, or new order
 	// Create order first
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
