@@ -50,12 +50,11 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 		AddressID     uint           `json:"address_id"`
 		UserID        uint           `json:"user_id"`
 		CheckoutItems []CheckoutItem `json:"checkout_items"`
+		OrderID       uint           `json:"order_id"`
 	}
 
 	var checkoutRequestBody CheckoutRequestBody
 
-	//TODO: Separate Out this, to have option to do payment for existing order, or new order
-	// Create order first
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
@@ -67,90 +66,113 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
-	order := models.Order{AddressID: checkoutRequestBody.AddressID, UserID: checkoutRequestBody.UserID}
-	dbResult := initializers.Db.Clauses(clause.Returning{}).Create(&order)
-	if dbResult.Error != nil {
 
-		log.Println(dbResult.Error)
-
-		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
-		return
-	}
-
-	// Create Order Item
-	var orderItems = []models.OrderItem{}
-	checkoutItems := checkoutRequestBody.CheckoutItems
-
+	var order models.Order
 	var products []models.Product
-	var idList []uint
-	// Process request body
-	for _, item := range checkoutItems {
-		idList = append(idList, item.ProductID)
-	}
+	var productIDList []uint
 
-	err = initializers.Db.Find(&products, idList).Error
-	if err != nil {
-		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
+	if checkoutRequestBody.OrderID == 0 {
+		// Create new order
+		order = models.Order{AddressID: checkoutRequestBody.AddressID, UserID: checkoutRequestBody.UserID}
+		dbResult := initializers.Db.Clauses(clause.Returning{}).Create(&order)
+		if dbResult.Error != nil {
 
-	// Check if all proudcts can be found
-	for _, productId := range idList {
-		if !productIdExists(products, productId) {
-			jsend.Fail(w, fmt.Sprintf("Product ID: %v not found", productId), http.StatusBadRequest)
+			log.Println(dbResult.Error)
 
-			return
-		}
-	}
-
-	for idx, item := range checkoutItems {
-		// Validate
-		if validErrs := item.validate(); len(validErrs) > 0 {
-			err := map[string]interface{}{"message": validErrs}
-			jsend.Fail(w, err, http.StatusBadRequest)
+			jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 			return
 		}
 
-		orderItems = append(orderItems, models.OrderItem{
-			OrderID:   order.ID,
-			ProductID: item.ProductID,
-			Quantity:  item.Quantity,
-			Price:     products[idx].UnitPrice,
-			Currency:  products[idx].Currency,
-		})
+		// Create Order Item
+		var orderItems = []models.OrderItem{}
+
+		// Process request body
+		checkoutItems := checkoutRequestBody.CheckoutItems
+		for _, item := range checkoutItems {
+			productIDList = append(productIDList, item.ProductID)
+		}
+
+		err = initializers.Db.Find(&products, productIDList).Error
+		if err != nil {
+			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+
+		// Check if all proudcts can be found
+		for _, productId := range productIDList {
+			if !productIdExists(products, productId) {
+				jsend.Fail(w, fmt.Sprintf("Product ID: %v not found", productId), http.StatusBadRequest)
+				return
+			}
+		}
+
+		for idx, item := range checkoutItems {
+			// Validate
+			if validErrs := item.validate(); len(validErrs) > 0 {
+				err := map[string]interface{}{"message": validErrs}
+				jsend.Fail(w, err, http.StatusBadRequest)
+				return
+			}
+
+			orderItems = append(orderItems, models.OrderItem{
+				OrderID:   order.ID,
+				ProductID: item.ProductID,
+				Quantity:  item.Quantity,
+				Price:     products[idx].UnitPrice,
+				Currency:  products[idx].Currency,
+			})
+		}
+		initializers.Db.Create(&orderItems)
+		initializers.Db.Preload("OrderItems.Product").First(&order, order.ID)
+	} else {
+		// match based on existing order
+		err = initializers.Db.Preload("OrderItems.Product").First(&order, checkoutRequestBody.OrderID).Error
+		if err != nil {
+			jsend.Fail(w, fmt.Sprintf("Order ID: %v not found", checkoutRequestBody.OrderID), http.StatusBadRequest)
+			return
+		}
+
+		// Process request body
+		for _, item := range *order.OrderItems {
+			productIDList = append(productIDList, item.ProductID)
+		}
+
+		err = initializers.Db.Find(&products, productIDList).Error
+		if err != nil {
+			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
 	}
-	initializers.Db.Create(&orderItems)
 
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	successUrl := fmt.Sprintf("%s/orders", frontend_base_url)
-	cancelUrl := fmt.Sprintf("%s/carts", frontend_base_url)
+	cancelUrl := fmt.Sprintf("%s/orders", frontend_base_url)
 	lineItems := []*stripe.CheckoutSessionLineItemParams{}
 
 	// Convert to stripe slice
-	for idx, product := range products {
+	for _, orderItem := range *order.OrderItems {
 		var itemQuantity int = 1
-		if checkoutItems[idx].ProductID == product.ID {
-			itemQuantity = checkoutItems[idx].Quantity
-		}
+		itemQuantity = orderItem.Quantity
 
 		image := "null"
 		hostingDomain := os.Getenv("HOSTING_DOMAIN")
-		if product.ImagePath != "" && hostingDomain != "" {
-			image = fmt.Sprintf("%s%s", hostingDomain, product.ImagePath)
+		if orderItem.Product.ImagePath != "" && hostingDomain != "" {
+			image = fmt.Sprintf("%s%s", hostingDomain, orderItem.Product.ImagePath)
 		}
 		images := []*string{&image}
 
 		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
 			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-				Currency: stripe.String(product.Currency),
+				Currency: stripe.String(orderItem.Currency),
 				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-					Name:        stripe.String(product.Name),
-					Description: stripe.String(product.Description),
+					Name:        stripe.String(orderItem.Product.Name),
+					Description: stripe.String(orderItem.Product.Description),
 					Images:      images,
 				},
-				UnitAmount: stripe.Int64(int64(product.UnitPrice * 100)),
+				UnitAmount: stripe.Int64(int64(orderItem.Product.UnitPrice * 100)),
 			},
 			Quantity: stripe.Int64(int64(itemQuantity)),
 		})
