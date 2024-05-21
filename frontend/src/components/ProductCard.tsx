@@ -28,14 +28,14 @@ export default function ProductCard({
     : "/unknown-product.png";
 
   return (
-    <Card sx={{ maxWidth: 200 }}>
+    <Card sx={{ maxWidth: "100%" }}>
       <CardActionArea component={Link} to={`/products/${product.id}`}>
         <CardMedia
           component="img"
-          height="100"
           image={imagePath}
           className="text-black"
           alt={product.name}
+          sx={{ objectFit: "contain", height: "300px" }}
         />
         <CardContent>
           <Typography gutterBottom variant="h6" component="div">

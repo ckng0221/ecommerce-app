@@ -15,6 +15,7 @@ import { IOrder, IOrderItem } from "../interfaces/order";
 import { IUser } from "../interfaces/user";
 import dayjs from "dayjs";
 import { Link as RouterLink } from "react-router-dom";
+import StatusChip from "../components/StatusChip";
 interface IProps {
   user: IUser;
 }
@@ -90,8 +91,7 @@ function Order({ order }: { order: IOrder }) {
         <div className="mb-2">Order Date: {orderDate}</div>
 
         <div className="mb-2">
-          Status:{" "}
-          <Chip label={order.order_status} color="primary" variant="filled" />
+          Status: <StatusChip orderStatus={order.order_status} />
         </div>
       </div>
       {order?.order_items?.map((item) => (

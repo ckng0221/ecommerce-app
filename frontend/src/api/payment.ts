@@ -11,13 +11,17 @@ interface ICheckoutItem {
 }
 
 interface ICheckout {
-  address_id: string | number;
-  user_id: string | number;
-  checkout_items: ICheckoutItem[];
+  address_id?: string | number;
+  user_id?: string | number;
+  checkout_items?: ICheckoutItem[];
+  order_id?: string | number;
 }
 
 export async function createPaymentCheckout(payload: ICheckout) {
-  const endpoint = `${url}/checkout/session`;
-
-  return await api.post(endpoint, payload);
+  try {
+    const endpoint = `${url}/checkout/session`;
+    return await api.post(endpoint, payload);
+  } catch (err) {
+    console.error(err);
+  }
 }

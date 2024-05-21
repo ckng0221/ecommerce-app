@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardActionArea,
   CardContent,
@@ -14,6 +15,9 @@ import { IOrder, IOrderItem } from "../interfaces/order";
 
 import { Breadcrumbs, Link } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { createPaymentCheckout } from "../api/payment";
+import toast from "react-hot-toast";
+import StatusChip from "../components/StatusChip";
 
 export default function OrderItemPage() {
   const { orderId } = useParams();
@@ -86,6 +90,23 @@ function Order({ order }: { order: IOrder }) {
   const totalPrice = getTotalPrice(order);
   const currency = order?.order_items?.[0]?.currency.toUpperCase();
 
+  async function performPaymentforExistingOrder() {
+    let res;
+    try {
+      if (order.id) {
+        res = await createPaymentCheckout({
+          order_id: order.id,
+        });
+        if (res?.status === 200) {
+          const paymentUrl = res?.data?.data.url;
+          window.location = paymentUrl;
+        }
+      }
+    } catch (err) {
+      toast.error("failed to proceed payment");
+    }
+  }
+
   return (
     <div className="border border-solid border-4">
       <div className="mb-4">
@@ -100,8 +121,7 @@ function Order({ order }: { order: IOrder }) {
         </div>
         <div className="mb-2">
           {" "}
-          Status:{" "}
-          <Chip label={order.order_status} color="primary" variant="filled" />
+          Status: <StatusChip orderStatus={order.order_status} />
         </div>
       </div>
       {order?.order_items?.map((item) => (
@@ -115,6 +135,17 @@ function Order({ order }: { order: IOrder }) {
         <b>
           {currency} {totalPrice}
         </b>
+        {order.order_status === "to_pay" && (
+          <div className="my-4">
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={performPaymentforExistingOrder}
+            >
+              Proceed to payment
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

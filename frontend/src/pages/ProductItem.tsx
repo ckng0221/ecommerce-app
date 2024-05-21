@@ -96,7 +96,7 @@ export default function ProductItem({
             <div className="grid grid-cols-2">
               <CardMedia
                 component="img"
-                height="100"
+                height="500"
                 image={imagePath}
                 alt={product?.name}
                 className="pl-8"

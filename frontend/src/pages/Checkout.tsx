@@ -61,8 +61,8 @@ export default function Checkout({
         user_id: user.id,
         checkout_items: checkoutItemsMod,
       });
-      if (res.status === 200) {
-        const paymentUrl = res.data?.data.url;
+      if (res?.status === 200) {
+        const paymentUrl = res?.data?.data.url;
         window.location = paymentUrl;
       }
     } catch (err) {
