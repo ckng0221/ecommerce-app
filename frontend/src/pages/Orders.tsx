@@ -1,10 +1,20 @@
-import { Card, CardContent, CardMedia, Typography } from "@mui/material";
+import {
+  Breadcrumbs,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
+  Chip,
+  Link,
+  Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { getOrders } from "../api/order";
 import { IOrder, IOrderItem } from "../interfaces/order";
 import { IUser } from "../interfaces/user";
 import dayjs from "dayjs";
+import { Link as RouterLink } from "react-router-dom";
 interface IProps {
   user: IUser;
 }
@@ -27,11 +37,30 @@ export default function Orders({ user }: IProps) {
 
   return (
     <>
+      <div className="mb-4">
+        <Breadcrumbs aria-label="breadcrumb">
+          <Link underline="hover" color="inherit" to="/" component={RouterLink}>
+            Home
+          </Link>
+          <Link
+            underline="hover"
+            color="text.primary"
+            to="/orders"
+            component={RouterLink}
+            aria-current="page"
+          >
+            My Orders
+          </Link>
+        </Breadcrumbs>
+      </div>
+
       {/* {JSON.stringify(orders)} */}
       {orders.map((order) => {
         return (
           <div key={order.id} className="mb-4">
-            <Order order={order} />
+            <CardActionArea component={RouterLink} to={`/orders/${order.id}`}>
+              <Order order={order} />
+            </CardActionArea>
           </div>
         );
       })}
@@ -60,7 +89,10 @@ function Order({ order }: { order: IOrder }) {
         <div className="mb-2">Order ID: {order.id}</div>
         <div className="mb-2">Order Date: {orderDate}</div>
 
-        <div className="mb-2"> Status: {order.order_status}</div>
+        <div className="mb-2">
+          Status:{" "}
+          <Chip label={order.order_status} color="primary" variant="filled" />
+        </div>
       </div>
       {order?.order_items?.map((item) => (
         <div key={item.id} className="mb-4 border border-dashed">

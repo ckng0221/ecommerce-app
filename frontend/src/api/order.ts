@@ -14,3 +14,13 @@ export async function getOrders(userId: string) {
     console.error(error);
   }
 }
+
+export async function getOrderById(orderId: string) {
+  const endpoint = `${url}/${orderId}`;
+  try {
+    const data = await api.get(endpoint);
+    return data;
+  } catch (error: any) {
+    console.error(error);
+  }
+}

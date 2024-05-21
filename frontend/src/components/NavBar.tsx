@@ -55,6 +55,11 @@ export default function NavBar({
             <Button color="inherit" onClick={loginAction}>
               Login
             </Button>
+            <Button color="inherit">
+              <Link to="/orders" className="text-white hover:text-white">
+                My Orders
+              </Link>
+            </Button>
           </Toolbar>
         </AppBar>
       </Box>

@@ -13,6 +13,7 @@ import Layout from "./pages/Layout";
 import ProductItem from "./pages/ProductItem";
 import { getUserById } from "./api/user";
 import Orders from "./pages/Orders";
+import OrderItemPage from "./pages/OrderItem";
 
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
@@ -98,6 +99,7 @@ function App() {
               }
             />
             <Route path="/orders" element={<Orders user={user} />} />
+            <Route path="/orders/:orderId" element={<OrderItemPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
