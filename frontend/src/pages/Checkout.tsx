@@ -87,7 +87,7 @@ export default function Checkout({
           </div>{" "}
           {checkoutItems.map((checkoutItem, idx) => {
             return (
-              <div key={idx}>
+              <div key={idx} className="mb-4">
                 <CheckoutItem checkoutItem={checkoutItem} />
               </div>
             );

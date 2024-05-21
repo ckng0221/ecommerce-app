@@ -6,6 +6,7 @@ export interface ICart {
   product_id: string | number;
   product?: IProduct;
   user_id: string | number;
+  is_selected?: boolean;
 }
 
 export interface ICartUpdate {

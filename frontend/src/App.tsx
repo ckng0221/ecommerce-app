@@ -86,7 +86,14 @@ function App() {
             />
             <Route
               path="/carts"
-              element={<Carts carts={carts} setCarts={setCarts} />}
+              element={
+                <Carts
+                  carts={carts}
+                  setCarts={setCarts}
+                  checkoutItems={checkoutItems}
+                  setCheckoutItems={setCheckoutItems}
+                />
+              }
             />
             <Route
               path="/checkout"
