@@ -19,12 +19,14 @@ import (
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/webhook"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type CheckoutItem struct {
 	ProductID uint `json:"product_id"`
 	Quantity  int  `json:"quantity"`
+	CartID    uint `json:"cart_id"`
 }
 
 func productIdExists(checkoutItems []models.Product, productID uint) bool {
@@ -88,10 +90,15 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 
 		// Process request body
 		checkoutItems := checkoutRequestBody.CheckoutItems
+		var cartIDList []uint
 		for _, item := range checkoutItems {
 			productIDList = append(productIDList, item.ProductID)
-		}
 
+			// if checkout from cart
+			if item.CartID != 0 {
+				cartIDList = append(cartIDList, item.CartID)
+			}
+		}
 		err = initializers.Db.Find(&products, productIDList).Error
 		if err != nil {
 			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -125,6 +132,34 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 		}
 		initializers.Db.Create(&orderItems)
 		initializers.Db.Preload("OrderItems.Product").First(&order, order.ID)
+
+		// Remove carts
+		if len(cartIDList) > 0 {
+			var carts []models.Cart
+			initializers.Db.Delete(&carts, cartIDList)
+		} else {
+			// Consume stock quantity for those without cart
+			for _, item := range checkoutItems {
+				var product models.Product
+				initializers.Db.First(&product, item.ProductID)
+
+				if product.StockQuantity < item.Quantity {
+					log.Printf("insufficient stock")
+					jsend.Error(w, "internal server error ", http.StatusBadRequest)
+					return
+				}
+
+				expression := "stock_quantity - ?"
+				result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, item.Quantity))
+
+				if result.Error != nil {
+					log.Println(result.Error)
+					jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+					return
+				}
+			}
+		}
+
 	} else {
 		// match based on existing order
 		err = initializers.Db.Preload("OrderItems.Product").First(&order, checkoutRequestBody.OrderID).Error

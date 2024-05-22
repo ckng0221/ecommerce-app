@@ -54,8 +54,13 @@ export default function Checkout({
     let res;
     try {
       const checkoutItemsMod = checkoutItems.map((item) => {
-        return { product_id: item.product.id, quantity: item.quantity };
+        return {
+          product_id: item.product.id,
+          quantity: item.quantity,
+          cart_id: item.cart_id,
+        };
       });
+
       res = await createPaymentCheckout({
         address_id: addressId || 0,
         user_id: user.id,

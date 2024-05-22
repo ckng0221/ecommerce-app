@@ -44,10 +44,6 @@ export default function ProductItem({
     if (productId && checkoutQty) {
       setCheckoutItems([{ quantity: checkoutQty, product: product }]);
 
-      // TODO: find a correct timing to consume stock
-      // consume stock
-      // await consumeProductStock(productId, { stock_quantity: checkoutQty });
-
       navigate("/checkout");
     }
   }

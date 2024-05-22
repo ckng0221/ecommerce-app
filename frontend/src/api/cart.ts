@@ -33,3 +33,13 @@ export async function updateCartById(id: string, payload: ICartUpdate) {
 
   return await api.patch(endpoint, payload);
 }
+
+export async function deleteCartById(id: string) {
+  try {
+    const endpoint = `${url}/${id}`;
+
+    return await api.delete(endpoint);
+  } catch (err) {
+    console.error(err);
+  }
+}

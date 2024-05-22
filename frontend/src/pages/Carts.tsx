@@ -54,6 +54,7 @@ export default function Cart({
     let total = 0;
     const selectedCarts: any = carts.filter((cart) => cart.is_selected);
     for (let i = 0; i < selectedCarts.length; i++) {
+      selectedCarts[i].cart_id = selectedCarts[i].id;
       const item = selectedCarts[i];
       total += (item?.product?.unit_price || 0) * item.quantity;
     }

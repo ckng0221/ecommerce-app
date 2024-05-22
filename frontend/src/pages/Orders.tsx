@@ -82,7 +82,7 @@ function Order({ order }: { order: IOrder }) {
   const orderDate = dayjs(order?.created_at).format("DD/MM/YYYY hh:mm A");
 
   const totalPrice = getTotalPrice(order);
-  const currency = order?.order_items?.[0].currency.toUpperCase();
+  const currency = order?.order_items?.[0]?.currency?.toUpperCase();
 
   return (
     <div className="border border-solid border-4">
@@ -100,8 +100,7 @@ function Order({ order }: { order: IOrder }) {
         </div>
       ))}
       <div className="mb-2">
-        {" "}
-        Total:{" "}
+        Total:
         <b>
           {currency} {totalPrice}
         </b>
