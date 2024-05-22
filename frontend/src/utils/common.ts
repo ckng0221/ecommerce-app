@@ -1,8 +1,8 @@
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "react-hot-toast";
 import { createOrAddCart } from "../api/cart";
-import { ICart } from "../interfaces/cart";
 import { consumeProductStock } from "../api/product";
+import { ICart } from "../interfaces/cart";
 import { IProduct } from "../interfaces/product";
 
 /**
@@ -16,6 +16,10 @@ export async function addToCart(
   userId: string,
   productQuantity: number
 ) {
+  if (!userId) {
+    toast.error("Please login first");
+    return;
+  }
   if (!product.id) {
     console.error("Absence of product ID");
     return;
@@ -52,4 +56,10 @@ export async function addToCart(
     setCarts(cartsNew);
   }
   toast.success("Added to cart!");
+}
+
+export function getCookie(name: string) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts?.pop()?.split(";").shift();
 }

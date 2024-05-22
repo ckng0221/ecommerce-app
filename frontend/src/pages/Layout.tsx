@@ -12,10 +12,10 @@ interface IProps {
   setCarts: Dispatch<SetStateAction<ICart[]>>;
 }
 
-export default function Layout({ carts }: IProps) {
+export default function Layout({ user, carts }: IProps) {
   return (
     <>
-      <NavBar carts={carts} />
+      <NavBar carts={carts} user={user} />
       <Outlet />
       <Toaster position="top-center" />
       <br />

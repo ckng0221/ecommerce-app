@@ -4,10 +4,12 @@ import (
 	"context"
 	"ecommerce-app/config"
 	"ecommerce-app/initializers"
+	"ecommerce-app/middlewares"
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -50,6 +52,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	tokenClaims, idToken, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
 	if err != nil {
+		log.Print(err.Error())
 		jsend.Fail(w, err, http.StatusUnauthorized)
 		return
 	}
@@ -84,7 +87,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 
 	// respond
-	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "access_token": idToken})
+	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": idToken})
 }
 
 // Google login first > user login
@@ -161,7 +164,13 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user")
+
+	ctx := r.Context()
+	fmt.Println("ctx after", ctx)
+
+	// NOTE: the context key need to use the same type (using import)
+	var userCtxKey middlewares.CtxKey = "user"
+	user := ctx.Value(userCtxKey.(models.User))
 
 	jsend.Success(w, user, http.StatusOK)
 }

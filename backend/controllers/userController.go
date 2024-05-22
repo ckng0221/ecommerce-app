@@ -5,6 +5,7 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -85,6 +86,29 @@ func GetUserById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	GetById[models.User](w, r, scope)
+}
+
+func GetUserBySub(w http.ResponseWriter, r *http.Request) {
+	scope := func(db *gorm.DB) *gorm.DB {
+		return db.Joins("DefaultAddress")
+	}
+
+	sub := chi.URLParam(r, "sub")
+
+	var user models.User
+
+	err := initializers.Db.Scopes(scope).Where("sub = ?", sub).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			jsend.Fail(w, "Record not found", http.StatusBadRequest)
+			return
+		}
+		log.Println(err)
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	jsend.Success(w, &user)
 }
 
 func GetAddressesByUserId(w http.ResponseWriter, r *http.Request) {

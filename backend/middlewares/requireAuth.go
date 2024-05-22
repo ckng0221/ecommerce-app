@@ -14,12 +14,15 @@ import (
 	"clevergo.tech/jsend"
 )
 
+type CtxKey string
+
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bearerTokenArr := strings.Split(r.Header.Get("Authorization"), "Bearer ")
 		bearerToken := bearerTokenArr[len(bearerTokenArr)-1]
 		apiKey := r.Header.Get("x-api-key")
-		if apiKey == os.Getenv("ADMIN_API_KEY") {
+		actualApiKey := os.Getenv("ADMIN_API_KEY")
+		if (apiKey == actualApiKey) && (actualApiKey != "") {
 			// Create a temp admin user object
 			type CtxKey string
 			var userCtxKey CtxKey = "user"
@@ -54,7 +57,7 @@ func RequireAuth(next http.Handler) http.Handler {
 
 		// Find the user with token sub
 		var user models.User
-		initializers.Db.Where("sub = ?", claims.Sub).First(&user)
+		initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
 
 		if user.ID == 0 {
 			log.Println("User not found")
@@ -63,9 +66,12 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Attach user to context
-		type CtxKey string
 		var userCtxKey CtxKey = "user"
-		ctx = context.WithValue(r.Context(), userCtxKey, user)
+		ctx = context.WithValue(ctx, userCtxKey, user)
+		fmt.Println("ctx before", ctx)
+
+		user2 := ctx.Value(userCtxKey)
+		fmt.Println("user before", user2)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

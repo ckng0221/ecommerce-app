@@ -11,6 +11,16 @@ export async function getUserById(id: string) {
   return await api.get(endpoint);
 }
 
+export async function getUserBySub(sub: string) {
+  try {
+    const endpoint = `${url}/sub/${sub}`;
+
+    return await api.get(endpoint);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 export async function getUserAddresses(userId: string) {
   try {
     const endpoint = `${url}/${userId}/addresses`;

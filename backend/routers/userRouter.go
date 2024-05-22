@@ -16,6 +16,7 @@ func UserRouter() *chi.Mux {
 	r.Post("/signup", controllers.Signup)
 
 	r.Get("/{id}", controllers.GetUserById)
+	r.Get("/sub/{sub}", controllers.GetUserBySub)
 
 	r.Get("/{id}/addresses", controllers.GetAddressesByUserId)
 
