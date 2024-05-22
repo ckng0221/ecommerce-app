@@ -4,7 +4,6 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { login, validateCookieToken } from "./api/auth";
 import { getCarts } from "./api/cart";
-import { getUserById, getUserBySub } from "./api/user";
 import { ICart } from "./interfaces/cart";
 import { ICheckoutItem } from "./interfaces/checkout";
 import { IUser } from "./interfaces/user";
@@ -16,6 +15,9 @@ import OrderItemPage from "./pages/OrderItem";
 import Orders from "./pages/Orders";
 import ProductItem from "./pages/ProductItem";
 import { getCookie } from "./utils/common";
+import Profile from "./pages/Profile";
+
+//TODO: add profile page, need to able to add address
 
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
@@ -25,7 +27,7 @@ function App() {
     name: "",
     password: "",
     role: "",
-    profile_pric: "",
+    profile_pic: "",
     sub: "",
     default_address_id: "",
     default_address: {
@@ -56,9 +58,6 @@ function App() {
         // const token = getCookie("Authorization");
         // console.log(token);
 
-        // To remove query parameters from url
-        // router.push("/");
-        // console.log(res);
         if (res?.status === 200) {
           location.reload();
         }
@@ -92,7 +91,14 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<Layout user={user} carts={carts} setCarts={setCarts} />}
+            element={
+              <Layout
+                user={user}
+                setUser={setUser}
+                carts={carts}
+                setCarts={setCarts}
+              />
+            }
           >
             {/* Public */}
             <Route
@@ -134,6 +140,10 @@ function App() {
             />
             <Route path="/orders" element={<Orders user={user} />} />
             <Route path="/orders/:orderId" element={<OrderItemPage />} />
+            <Route
+              path="/profile"
+              element={<Profile user={user} setUser={setUser} />}
+            />
           </Route>
         </Routes>
       </BrowserRouter>

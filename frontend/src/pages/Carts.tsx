@@ -52,6 +52,7 @@ export default function Cart({
   }
 
   const [totalAmount, setTotalAmount] = useState(0);
+  const [canCheckout, setCanCheckout] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
     let total = 0;
@@ -63,7 +64,12 @@ export default function Cart({
     }
     setTotalAmount(total);
     setCheckoutItems(selectedCarts);
-  }, [carts, setCheckoutItems]);
+    if (checkoutItems.length > 0) {
+      setCanCheckout(true);
+    } else {
+      setCanCheckout(false);
+    }
+  }, [carts, checkoutItems.length, setCheckoutItems]);
 
   return (
     <>
@@ -90,6 +96,7 @@ export default function Cart({
           <Button
             size="small"
             color="primary"
+            disabled={!canCheckout}
             onClick={() => {
               navigate("/checkout");
             }}

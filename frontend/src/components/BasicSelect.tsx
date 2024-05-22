@@ -42,7 +42,6 @@ export default function BasicSelect({
                 {option?.state}
                 <br />
                 {option?.zip}
-                <br />
               </MenuItem>
             );
           })}

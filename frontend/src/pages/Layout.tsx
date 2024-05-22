@@ -8,14 +8,15 @@ import { IUser } from "../interfaces/user";
 
 interface IProps {
   user: IUser;
+  setUser: Dispatch<SetStateAction<IUser>>;
   carts: ICart[];
   setCarts: Dispatch<SetStateAction<ICart[]>>;
 }
 
-export default function Layout({ user, carts }: IProps) {
+export default function Layout({ user, setUser, carts }: IProps) {
   return (
     <>
-      <NavBar carts={carts} user={user} />
+      <NavBar carts={carts} user={user} setUser={setUser} />
       <Outlet />
       <Toaster position="top-center" />
       <br />

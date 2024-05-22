@@ -67,7 +67,6 @@ export async function validateCookieToken(id_token: string) {
     },
   });
   if (res.status === 200) {
-    console.log("res", res);
     const user = await res.data.data;
     return user;
   } else {
