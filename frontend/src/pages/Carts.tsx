@@ -5,15 +5,18 @@ import {
   CardContent,
   CardMedia,
   Checkbox,
+  IconButton,
   Typography,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { updateCartById } from "../api/cart";
+import { deleteCartById, updateCartById } from "../api/cart";
 import { addProductStock, consumeProductStock } from "../api/product";
 import QuantityInput from "../components/QuantityInput";
 import { ICart } from "../interfaces/cart";
 import { ICheckoutItem } from "../interfaces/checkout";
+import DeleteIcon from "@mui/icons-material/Delete";
+import toast from "react-hot-toast";
 
 interface IProps {
   carts: ICart[];
@@ -171,6 +174,18 @@ function CartItem({
       setCarts(newCarts);
     }
   }
+
+  async function handleDelete(cartId: string | undefined) {
+    console.log("cartid", cartId);
+
+    if (!cartId) return;
+    const res = await deleteCartById(cartId);
+    if (res?.status === 204) {
+      toast.success("Removed from cart");
+      const newCarts = carts.filter((cart) => cart.id != cartId);
+      setCarts(newCarts);
+    }
+  }
   return (
     <div className="grid grid-cols-8">
       <Checkbox
@@ -193,26 +208,34 @@ function CartItem({
                 className="pl-8"
               />
             </CardActionArea>
-            <div>
-              <CardContent>
-                <Typography gutterBottom variant="h5" component="div">
-                  {cart.product?.name}
+            <CardContent className="content-start">
+              <div className="flex justify-end">
+                <IconButton
+                  aria-label="delete"
+                  onClick={() => {
+                    handleDelete(cart?.id);
+                  }}
+                >
+                  <DeleteIcon color="error" />
+                </IconButton>
+              </div>
+              <Typography gutterBottom variant="h5" component="div">
+                {cart.product?.name}
+              </Typography>
+              <br />
+              <div className="mb-4">
+                <Typography variant="body2" color="text.secondary">
+                  Price: {cart.product?.currency.toUpperCase()}{" "}
+                  {cart.product?.unit_price}
                 </Typography>
-                <br />
-                <div className="mb-4">
-                  <Typography variant="body2" color="text.secondary">
-                    Price: {cart.product?.currency.toUpperCase()}{" "}
-                    {cart.product?.unit_price}
-                  </Typography>
-                </div>
-                <QuantityInput
-                  value={value}
-                  setValue={setValue}
-                  onChangeEvent={changeQuantity}
-                  max={cart.product?.stock_quantity}
-                />
-              </CardContent>
-            </div>
+              </div>
+              <QuantityInput
+                value={value}
+                setValue={setValue}
+                onChangeEvent={changeQuantity}
+                max={cart.product?.stock_quantity}
+              />
+            </CardContent>
           </div>
         </div>
       </Card>

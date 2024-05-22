@@ -136,7 +136,7 @@ export default function ProductItem({
                           addToCart(
                             carts,
                             setCarts,
-                            productId,
+                            product,
                             user.id,
                             checkoutQty
                           );
