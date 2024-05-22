@@ -60,9 +60,13 @@ export default function Checkout({
           cart_id: item.cart_id,
         };
       });
+      if (!addressId) {
+        toast.error("Address cannot be null!");
+        return;
+      }
 
       res = await createPaymentCheckout({
-        address_id: addressId || 0,
+        address_id: addressId,
         user_id: user.id,
         checkout_items: checkoutItemsMod,
       });

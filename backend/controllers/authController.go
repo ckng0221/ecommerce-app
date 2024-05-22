@@ -170,7 +170,7 @@ func Validate(w http.ResponseWriter, r *http.Request) {
 
 	// NOTE: the context key need to use the same type (using import)
 	var userCtxKey middlewares.CtxKey = "user"
-	user := ctx.Value(userCtxKey.(models.User))
+	user := ctx.Value(userCtxKey)
 
 	jsend.Success(w, user, http.StatusOK)
 }

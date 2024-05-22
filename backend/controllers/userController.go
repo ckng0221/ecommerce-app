@@ -112,7 +112,7 @@ func GetUserBySub(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAddressesByUserId(w http.ResponseWriter, r *http.Request) {
-	GetChildrenById[models.Address](w, r, "address_id", "User")
+	GetChildrenById[models.Address](w, r, "user_id", "User")
 }
 
 func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {

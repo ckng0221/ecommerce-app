@@ -87,7 +87,7 @@ func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdN
 	}
 
 	expression := fmt.Sprintf("%s = ?", chilrenIdName)
-	initializers.Db.Preload(preloadName).Scopes(paginationScope).Find(&modelObjs).Where(expression, id)
+	initializers.Db.Scopes(paginationScope).Where(expression, id).Find(&modelObjs)
 	jsend.Success(w, &modelObjs)
 }
 
