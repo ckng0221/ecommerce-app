@@ -1,15 +1,21 @@
 package initializers
 
-import "ecommerce-app/models"
+import (
+	"ecommerce-app/models"
+	"os"
+)
 
 func SynDatabase() {
-	Db.AutoMigrate(
-		&models.Product{},
-		&models.User{},
-		&models.Address{},
-		&models.Cart{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Payment{},
-	)
+	env := os.Getenv("ENV")
+	if env == "local" {
+		Db.AutoMigrate(
+			&models.Product{},
+			&models.User{},
+			&models.Address{},
+			&models.Cart{},
+			&models.Order{},
+			&models.OrderItem{},
+			&models.Payment{},
+		)
+	}
 }

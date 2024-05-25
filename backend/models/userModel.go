@@ -22,6 +22,7 @@ type User struct {
 	Carts            *[]Cart  `gorm:"foreignKey:UserID" json:"carts,omitempty"`
 	DefaultAddressID *uint    `json:"default_address_id"`
 	DefaultAddress   *Address `gorm:"foreignKey:DefaultAddressID" json:"default_address,omitempty"`
+	ContactNumber    *string  `gorm:"type:varchar(20)" json:"contact_number"`
 }
 type UserUpdate struct {
 	Name             *string `json:"name"`
@@ -30,6 +31,7 @@ type UserUpdate struct {
 	Role             *Role   `json:"role"`
 	ProfilePic       *string `json:"profile_pic"`
 	DefaultAddressID *uint   `json:"default_address_id"`
+	ContactNumber    *string `json:"contact_number"`
 }
 
 type UserSignUp struct {

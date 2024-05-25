@@ -4,6 +4,8 @@ import (
 	"ecommerce-app/initializers"
 	"ecommerce-app/routers"
 	"net/http"
+
+	_ "ariga.io/atlas-provider-gorm/gormschema"
 )
 
 func init() {
