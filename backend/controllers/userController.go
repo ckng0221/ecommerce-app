@@ -5,8 +5,9 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -56,8 +57,8 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	result := initializers.Db.Create(&user)
 
 	if result.Error != nil {
-		fmt.Println("failed to create user")
-		fmt.Println(result.Error)
+		log.Println("failed to create user")
+		log.Println(result.Error)
 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -79,15 +80,39 @@ func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
-	var scope = func(db *gorm.DB) *gorm.DB {
-		return db.Preload("DefaultAddress")
+	scope := utils.EmptyScope
+	scope = func(db *gorm.DB) *gorm.DB {
+		return db.Joins("DefaultAddress")
 	}
 
 	GetById[models.User](w, r, scope)
 }
 
+func GetUserBySub(w http.ResponseWriter, r *http.Request) {
+	scope := func(db *gorm.DB) *gorm.DB {
+		return db.Joins("DefaultAddress")
+	}
+
+	sub := chi.URLParam(r, "sub")
+
+	var user models.User
+
+	err := initializers.Db.Scopes(scope).Where("sub = ?", sub).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			jsend.Fail(w, "Record not found", http.StatusBadRequest)
+			return
+		}
+		log.Println(err)
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	jsend.Success(w, &user)
+}
+
 func GetAddressesByUserId(w http.ResponseWriter, r *http.Request) {
-	GetChildrenById[models.Address](w, r, "address_id", "User")
+	GetChildrenById[models.Address](w, r, "user_id", "User")
 }
 
 func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
@@ -107,11 +132,11 @@ func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	}
 	uID, _ := strconv.ParseUint(id, 10, 32)
 	address.UserID = uint(uID)
-	fmt.Println(address)
+	log.Println(address)
 
 	result := initializers.Db.Model(&models.Address{}).Create(&address)
 	if result.Error != nil {
-		fmt.Println(result.Error)
+		log.Println(result.Error)
 
 		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 		return
@@ -126,4 +151,22 @@ func UpdateUserById() func(w http.ResponseWriter, r *http.Request) {
 
 func DeleteUserById() func(w http.ResponseWriter, r *http.Request) {
 	return DeleteById[models.User]
+}
+
+func GetAddressById(w http.ResponseWriter, r *http.Request) {
+	scope := utils.EmptyScope
+
+	GetById[models.Address](w, r, scope)
+}
+
+func UpdateAddressById() func(w http.ResponseWriter, r *http.Request) {
+	return UpdateById[models.Address, models.AddressUpdate]
+}
+
+func DeleteAddressById() func(w http.ResponseWriter, r *http.Request) {
+	return DeleteById[models.Address]
+}
+
+func CreateAddress() func(w http.ResponseWriter, r *http.Request) {
+	return CreateOne[models.Address]
 }

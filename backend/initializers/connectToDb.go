@@ -1,7 +1,7 @@
 package initializers
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"gorm.io/driver/mysql"
@@ -31,5 +31,5 @@ func ConnectToDb() {
 	if err != nil {
 		panic("Failed to connnect to DB")
 	}
-	fmt.Println("Connected to DB")
+	log.Println("Connected to DB")
 }

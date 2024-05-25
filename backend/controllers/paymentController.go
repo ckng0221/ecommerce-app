@@ -19,11 +19,14 @@ import (
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/webhook"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type CheckoutItem struct {
 	ProductID uint `json:"product_id"`
 	Quantity  int  `json:"quantity"`
+	CartID    uint `json:"cart_id"`
 }
 
 func productIdExists(checkoutItems []models.Product, productID uint) bool {
@@ -46,75 +49,165 @@ func (c *CheckoutItem) validate() url.Values {
 // Create Payment session in Stripe
 func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 	type CheckoutRequestBody struct {
-		OrderID       uint           `json:"order_id"`
+		AddressID     uint           `json:"address_id"`
+		UserID        uint           `json:"user_id"`
 		CheckoutItems []CheckoutItem `json:"checkout_items"`
+		OrderID       uint           `json:"order_id"`
 	}
 
 	var checkoutRequestBody CheckoutRequestBody
-	var products []models.Product
-	var idList []uint
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
-
 		return
 	}
 
 	err = json.Unmarshal(body, &checkoutRequestBody)
 	if err != nil {
-		jsend.Fail(w, "Failed to parse request body", http.StatusBadRequest)
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
-	checkoutItems := checkoutRequestBody.CheckoutItems
 
-	// Process request body
-	for _, item := range checkoutItems {
-		if validErrs := item.validate(); len(validErrs) > 0 {
-			err := map[string]interface{}{"message": validErrs}
-			jsend.Fail(w, err, http.StatusBadRequest)
+	var order models.Order
+	var products []models.Product
+	var productIDList []uint
+
+	if checkoutRequestBody.OrderID == 0 {
+		// Create new order
+		order = models.Order{AddressID: checkoutRequestBody.AddressID, UserID: checkoutRequestBody.UserID}
+		dbResult := initializers.Db.Clauses(clause.Returning{}).Create(&order)
+		if dbResult.Error != nil {
+
+			log.Println(dbResult.Error)
+
+			jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 			return
 		}
-		idList = append(idList, item.ProductID)
-	}
 
-	err = initializers.Db.Find(&products, idList).Error
-	if err != nil {
-		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
-		fmt.Println(err)
-		return
-	}
+		// Create Order Item
+		var orderItems = []models.OrderItem{}
 
-	// Check if all proudcts can be found
-	for _, productId := range idList {
-		if !productIdExists(products, productId) {
-			jsend.Fail(w, fmt.Sprintf("Product ID: %v not found", productId), http.StatusBadRequest)
+		// Process request body
+		checkoutItems := checkoutRequestBody.CheckoutItems
+		var cartIDList []uint
+		for _, item := range checkoutItems {
+			productIDList = append(productIDList, item.ProductID)
 
+			// if checkout from cart
+			if item.CartID != 0 {
+				cartIDList = append(cartIDList, item.CartID)
+			}
+		}
+		err = initializers.Db.Find(&products, productIDList).Error
+		if err != nil {
+			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+
+		// Check if all proudcts can be found
+		for _, productId := range productIDList {
+			if !productIdExists(products, productId) {
+				jsend.Fail(w, fmt.Sprintf("Product ID: %v not found", productId), http.StatusBadRequest)
+				return
+			}
+		}
+
+		for idx, item := range checkoutItems {
+			// Validate
+			if validErrs := item.validate(); len(validErrs) > 0 {
+				err := map[string]interface{}{"message": validErrs}
+				jsend.Fail(w, err, http.StatusBadRequest)
+				return
+			}
+
+			orderItems = append(orderItems, models.OrderItem{
+				OrderID:   order.ID,
+				ProductID: item.ProductID,
+				Quantity:  item.Quantity,
+				Price:     products[idx].UnitPrice,
+				Currency:  products[idx].Currency,
+			})
+		}
+		initializers.Db.Create(&orderItems)
+		initializers.Db.Preload("OrderItems.Product").First(&order, order.ID)
+
+		// Remove carts
+		if len(cartIDList) > 0 {
+			var carts []models.Cart
+			initializers.Db.Delete(&carts, cartIDList)
+		} else {
+			// Consume stock quantity for those without cart
+			for _, item := range checkoutItems {
+				var product models.Product
+				initializers.Db.First(&product, item.ProductID)
+
+				if product.StockQuantity < item.Quantity {
+					log.Printf("insufficient stock")
+					jsend.Error(w, "internal server error ", http.StatusBadRequest)
+					return
+				}
+
+				expression := "stock_quantity - ?"
+				result := initializers.Db.Model(&product).UpdateColumn("stock_quantity", gorm.Expr(expression, item.Quantity))
+
+				if result.Error != nil {
+					log.Println(result.Error)
+					jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+					return
+				}
+			}
+		}
+
+	} else {
+		// match based on existing order
+		err = initializers.Db.Preload("OrderItems.Product").First(&order, checkoutRequestBody.OrderID).Error
+		if err != nil {
+			jsend.Fail(w, fmt.Sprintf("Order ID: %v not found", checkoutRequestBody.OrderID), http.StatusBadRequest)
+			return
+		}
+
+		// Process request body
+		for _, item := range *order.OrderItems {
+			productIDList = append(productIDList, item.ProductID)
+		}
+
+		err = initializers.Db.Find(&products, productIDList).Error
+		if err != nil {
+			jsend.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println(err)
 			return
 		}
 	}
 
 	var frontend_base_url = os.Getenv("FRONTEND_BASE_URL")
 	stripe.Key = os.Getenv("STRIPE_KEY")
-	successUrl := fmt.Sprintf("%s/successful", frontend_base_url)
-	cancelUrl := fmt.Sprintf("%s/cancel", frontend_base_url)
+	successUrl := fmt.Sprintf("%s/orders", frontend_base_url)
+	cancelUrl := fmt.Sprintf("%s/orders", frontend_base_url)
 	lineItems := []*stripe.CheckoutSessionLineItemParams{}
 
 	// Convert to stripe slice
-	for idx, product := range products {
+	for _, orderItem := range *order.OrderItems {
 		var itemQuantity int = 1
-		if checkoutItems[idx].ProductID == product.ID {
-			itemQuantity = checkoutItems[idx].Quantity
+		itemQuantity = orderItem.Quantity
+
+		image := "null"
+		hostingDomain := os.Getenv("HOSTING_DOMAIN")
+		if orderItem.Product.ImagePath != "" && hostingDomain != "" {
+			image = fmt.Sprintf("%s%s", hostingDomain, orderItem.Product.ImagePath)
 		}
+		images := []*string{&image}
 
 		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
 			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-				Currency: stripe.String(product.Currency),
+				Currency: stripe.String(orderItem.Currency),
 				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-					Name:        stripe.String(product.Name),
-					Description: stripe.String(product.Description),
+					Name:        stripe.String(orderItem.Product.Name),
+					Description: stripe.String(orderItem.Product.Description),
+					Images:      images,
 				},
-				UnitAmount: stripe.Int64(int64(product.UnitPrice * 100)),
+				UnitAmount: stripe.Int64(int64(orderItem.Product.UnitPrice * 100)),
 			},
 			Quantity: stripe.Int64(int64(itemQuantity)),
 		})
@@ -128,24 +221,24 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 	}
 
-	params.AddMetadata("order_id", fmt.Sprint(checkoutRequestBody.OrderID))
+	params.AddMetadata("order_id", fmt.Sprint(order.ID))
 
-	// fmt.Println("param", params)
+	// log.Println("param", params)
 	result, err := session.New(params)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// Create Payment record
 	var payment = models.Payment{
-		OrderID:         checkoutRequestBody.OrderID,
+		OrderID:         order.ID,
 		StripeSessionID: result.ID,
 	}
 	err = initializers.Db.Model(&models.Payment{}).Create(&payment).Error
 	if err != nil {
-		fmt.Println("Failed to create payment in db")
+		log.Println("Failed to create payment in db")
 		return
 	}
 
@@ -180,11 +273,11 @@ func TriggerFakePaymentEvent(w http.ResponseWriter, r *http.Request) {
 	// Run the command
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		w.WriteHeader(500)
 		return
 	}
-	fmt.Println(out.String())
+	log.Println(out.String())
 
 	jsend.Success(w, map[string]string{"message": "Triggered payment event"}, http.StatusAccepted)
 }
@@ -198,7 +291,7 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	// fmt.Println("signature", r.Header.Get("Stripe-Signature"))
+	// log.Println("signature", r.Header.Get("Stripe-Signature"))
 
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 
@@ -214,7 +307,7 @@ func StripePaymentHook(w http.ResponseWriter, r *http.Request) {
 	err = processPaymentEvent(event)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -226,10 +319,10 @@ func processPaymentEvent(event stripe.Event) error {
 	switch event.Type {
 	case "checkout.session.completed":
 		var checkoutSession stripe.CheckoutSession
-		// fmt.Println("raw", string(event.Data.Raw))
+		// log.Println("raw", string(event.Data.Raw))
 		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 		if err != nil {
-			fmt.Println("Failed to parse event data raw.")
+			log.Println("Failed to parse event data raw.")
 			return err
 		}
 
@@ -240,9 +333,9 @@ func processPaymentEvent(event stripe.Event) error {
 
 		// Further processing based on metadata...
 		var order models.Order
-		err = initializers.Db.First(&order, orderID).Error
+		err = initializers.Db.Preload("OrderItems").First(&order, orderID).Error
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return err
 		}
 
@@ -254,7 +347,7 @@ func processPaymentEvent(event stripe.Event) error {
 		// Update Order
 		err = initializers.Db.Model(&order).Updates(&orderUpdate).Error
 		if err != nil {
-			fmt.Println("Failed to update db")
+			log.Println("Failed to update db")
 			return err
 		}
 
@@ -268,7 +361,7 @@ func processPaymentEvent(event stripe.Event) error {
 
 		err = initializers.Db.Model(&payment).Where("stripe_session_id", stripeCheckoutSessionID).Updates(&paymentUpdate).Error
 		if err != nil {
-			fmt.Println("Failed to update db")
+			log.Println("Failed to update db")
 			return err
 		}
 	}

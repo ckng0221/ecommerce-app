@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"clevergo.tech/jsend"
 	"github.com/go-chi/chi"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Model interface{}
@@ -46,7 +48,7 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 
 	result := initializers.Db.Model(&modelObj).Create(&modelObj)
 	if result.Error != nil {
-		fmt.Println(result.Error)
+		log.Println(result.Error)
 
 		jsend.Error(w, "failed to create item", http.StatusInternalServerError)
 		return
@@ -66,7 +68,7 @@ func GetById[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gor
 			jsend.Fail(w, "Record not found", http.StatusBadRequest)
 			return
 		}
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -85,7 +87,7 @@ func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdN
 	}
 
 	expression := fmt.Sprintf("%s = ?", chilrenIdName)
-	initializers.Db.Preload(preloadName).Scopes(paginationScope).Find(&modelObjs).Where(expression, id)
+	initializers.Db.Scopes(paginationScope).Where(expression, id).Find(&modelObjs)
 	jsend.Success(w, &modelObjs)
 }
 
@@ -101,7 +103,7 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = json.Unmarshal(body, &modelObj)
+	err = json.Unmarshal(body, &modelUpdateObj)
 	if err != nil {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
@@ -113,12 +115,11 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 			jsend.Fail(w, "Record not found", http.StatusNotFound)
 			return
 		}
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	initializers.Db.Model(&modelObj).Updates(&modelUpdateObj)
-
+	initializers.Db.Clauses(clause.Returning{}).Model(&modelObj).Updates(&modelUpdateObj)
 	jsend.Success(w, &modelObj)
 
 }
@@ -135,7 +136,7 @@ func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
 			return
 
 		}
-		fmt.Println(err)
+		log.Println(err)
 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -143,7 +144,7 @@ func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
 
 	result := initializers.Db.Delete(&modelObj, id)
 	if result.Error != nil {
-		fmt.Println(err)
+		log.Println(err)
 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

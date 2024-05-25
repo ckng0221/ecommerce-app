@@ -4,12 +4,14 @@ import (
 	"context"
 	"ecommerce-app/config"
 	"ecommerce-app/initializers"
+	"ecommerce-app/middlewares"
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"clevergo.tech/jsend"
@@ -50,6 +52,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	tokenClaims, idToken, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
 	if err != nil {
+		log.Print(err.Error())
 		jsend.Fail(w, err, http.StatusUnauthorized)
 		return
 	}
@@ -57,18 +60,18 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// register user if not exist
 	var user models.User
 	err = initializers.Db.Where("sub = ?", tokenClaims.Sub).Limit(1).Find(&user).Error
-	fmt.Println(err)
+	log.Println(err)
 	sub := tokenClaims.Sub
 	profilePic := tokenClaims.Picture
 	if user.ID == 0 {
-		fmt.Println("user not found")
+		log.Printf("user sub:  %s not found, creating user...\n", tokenClaims.Sub)
 		initializers.Db.Create(&models.User{
 			Name:       tokenClaims.Name,
 			Email:      tokenClaims.Email,
 			Sub:        &sub,
 			ProfilePic: &profilePic,
 		})
-		fmt.Println("user created")
+		log.Printf("user %s created\n", tokenClaims.Name)
 	}
 
 	// Set cookies
@@ -84,20 +87,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 
 	// respond
-	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "access_token": idToken})
+	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": idToken})
 }
 
 // Google login first > user login
 func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	state, err := utils.RandString(16)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	nonce, err := utils.RandString(16)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -106,7 +109,7 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 
 	config, err := config.GoogleConfig()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -135,14 +138,14 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 	if !ok {
-		fmt.Println("No id_token field in oauth2 token.")
+		log.Println("No id_token field in oauth2 token.")
 		return config.IDTokenClaims{}, "", err
 	}
 
 	// JWT token from identify provider
 	idToken, err := verifier.Verify(ctx, rawIDToken)
 	if err != nil {
-		fmt.Println("Failed to verify id token", err)
+		log.Println("Failed to verify id token", err)
 		return config.IDTokenClaims{}, "", err
 	}
 
@@ -153,7 +156,7 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 	var tokenClaims config.IDTokenClaims
 	if err := idToken.Claims(&tokenClaims); err != nil {
 		// handle error
-		fmt.Println("Failed to unmarshal claim")
+		log.Println("Failed to unmarshal claim")
 		return config.IDTokenClaims{}, "", err
 	}
 
@@ -161,7 +164,13 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user")
+
+	ctx := r.Context()
+	fmt.Println("ctx after", ctx)
+
+	// NOTE: the context key need to use the same type (using import)
+	var userCtxKey middlewares.CtxKey = "user"
+	user := ctx.Value(userCtxKey)
 
 	jsend.Success(w, user, http.StatusOK)
 }

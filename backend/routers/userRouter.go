@@ -16,6 +16,7 @@ func UserRouter() *chi.Mux {
 	r.Post("/signup", controllers.Signup)
 
 	r.Get("/{id}", controllers.GetUserById)
+	r.Get("/sub/{sub}", controllers.GetUserBySub)
 
 	r.Get("/{id}/addresses", controllers.GetAddressesByUserId)
 
@@ -24,6 +25,12 @@ func UserRouter() *chi.Mux {
 	r.Patch("/{id}", controllers.UpdateUserById())
 
 	r.Delete("/{id}", controllers.DeleteUserById())
+
+	// Address
+	r.Get("/addresses/{id}", controllers.GetAddressById)
+	r.Post("/addresses", controllers.CreateAddress())
+	r.Patch("/addresses/{id}", controllers.UpdateAddressById())
+	r.Delete("/addresses/{id}", controllers.DeleteAddressById())
 
 	return r
 }
