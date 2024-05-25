@@ -16,6 +16,7 @@ import Orders from "./pages/Orders";
 import ProductItem from "./pages/ProductItem";
 import { getCookie } from "./utils/common";
 import Profile from "./pages/Profile";
+import toast from "react-hot-toast";
 
 //TODO: add profile page, need to able to add address
 
@@ -45,10 +46,10 @@ function App() {
       if (queryParams.has("code")) {
         const code = queryParams.get("code") || "";
         const state = queryParams.get("state") || "";
-        console.log("mystate", state);
+        // console.log("mystate", state);
 
         window.history.replaceState({}, document.title, "/");
-        console.log("login...");
+        // console.log("login...");
         const cookieState = getCookie("state") || "";
         const nonce = getCookie("nonce") || "";
         // console.log("state", state);
@@ -59,7 +60,17 @@ function App() {
         // console.log(token);
 
         if (res?.status === 200) {
-          location.reload();
+          const name = res.data.data.name;
+          const token = res.data.data.access_token;
+          if (!token) return;
+          const user = await validateCookieToken(token);
+          setUser(user);
+          const data = await getCarts(user?.id);
+          if (data) {
+            setCarts(data?.data?.data);
+          }
+          toast.success(`Welcome back, ${name}!`);
+          // location.reload();
         }
       }
     }
@@ -71,7 +82,6 @@ function App() {
       const token = getCookie("Authorization");
       if (!token) return;
       const user = await validateCookieToken(token);
-
       setUser(user);
 
       if (!user?.id) return;

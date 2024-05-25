@@ -26,5 +26,11 @@ func UserRouter() *chi.Mux {
 
 	r.Delete("/{id}", controllers.DeleteUserById())
 
+	// Address
+	r.Get("/addresses/{id}", controllers.GetAddressById)
+	r.Post("/addresses", controllers.CreateAddress())
+	r.Patch("/addresses/{id}", controllers.UpdateAddressById())
+	r.Delete("/addresses/{id}", controllers.DeleteAddressById())
+
 	return r
 }

@@ -152,3 +152,21 @@ func UpdateUserById() func(w http.ResponseWriter, r *http.Request) {
 func DeleteUserById() func(w http.ResponseWriter, r *http.Request) {
 	return DeleteById[models.User]
 }
+
+func GetAddressById(w http.ResponseWriter, r *http.Request) {
+	scope := utils.EmptyScope
+
+	GetById[models.Address](w, r, scope)
+}
+
+func UpdateAddressById() func(w http.ResponseWriter, r *http.Request) {
+	return UpdateById[models.Address, models.AddressUpdate]
+}
+
+func DeleteAddressById() func(w http.ResponseWriter, r *http.Request) {
+	return DeleteById[models.Address]
+}
+
+func CreateAddress() func(w http.ResponseWriter, r *http.Request) {
+	return CreateOne[models.Address]
+}

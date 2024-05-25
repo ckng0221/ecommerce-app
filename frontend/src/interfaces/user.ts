@@ -18,4 +18,5 @@ export interface IAddress {
   city: string;
   state: string;
   zip: string;
+  user_id?: string | number;
 }

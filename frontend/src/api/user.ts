@@ -1,4 +1,4 @@
-import { IUser } from "../interfaces/user";
+import { IAddress, IUser } from "../interfaces/user";
 import { getApi } from "./api";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
@@ -37,6 +37,39 @@ export async function updateUserById(id: string, payload: Partial<IUser>) {
     const endpoint = `${url}/${id}`;
 
     return await api.patch(endpoint, payload);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function updateAddressById(
+  id: string,
+  payload: Partial<IAddress>
+) {
+  try {
+    const endpoint = `${url}/addresses/${id}`;
+
+    return await api.patch(endpoint, payload);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function createAddress(payload: IAddress) {
+  try {
+    const endpoint = `${url}/addresses`;
+
+    return await api.post(endpoint, payload);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function deleteAddressById(id: string) {
+  try {
+    const endpoint = `${url}/addresses/${id}`;
+
+    return await api.delete(endpoint);
   } catch (err) {
     console.error(err);
   }
