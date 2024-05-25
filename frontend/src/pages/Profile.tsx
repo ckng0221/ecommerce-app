@@ -18,14 +18,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import {
-  Dispatch,
-  Fragment,
-  SetStateAction,
-  useEffect,
-  useReducer,
-  useState,
-} from "react";
+import { Dispatch, Fragment, SetStateAction, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
   createAddress,
@@ -36,6 +29,8 @@ import {
 } from "../api/user";
 import BasicSelect from "../components/BasicSelect";
 import { IAddress, IUser } from "../interfaces/user";
+import ConfirmDialog from "../components/ConfirmDialog";
+import WarningIcon from "@mui/icons-material/Warning";
 
 export default function Profile({
   user,
@@ -69,6 +64,7 @@ export default function Profile({
   const [newAddress, setNewAddress] = useState(false);
   const [state, setState] = useState(0);
   const [errorFields, setErrorFields] = useState<string[]>([]);
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -87,9 +83,18 @@ export default function Profile({
     loadData();
   }, [user, state]);
 
-  function handleAddressChange(event: any) {
-    console.log(event.target.value);
+  useEffect(() => {
+    function confirmExit() {
+      return "You have attempted to leave this page. Are you sure?";
+    }
+    if (openForm) {
+      window.onbeforeunload = confirmExit;
+    } else {
+      window.onbeforeunload = () => {};
+    }
+  }, [openForm]);
 
+  function handleAddressChange(event: any) {
     setUserProfile((prev) => {
       return {
         ...prev,
@@ -100,9 +105,6 @@ export default function Profile({
 
   async function handleDeleteAddress(addressId: string | number | undefined) {
     if (!addressId) return;
-    //TODO: replace with dialog
-    const isConfirm = confirm("are you sure?");
-    if (!isConfirm) return;
 
     const res = await deleteAddressById(String(addressId));
     if (res?.status) {
@@ -111,10 +113,10 @@ export default function Profile({
     } else {
       toast.error("Failed to remove address");
     }
+    setOpenDialog((o) => !o);
   }
 
   async function handleUpdate() {
-    console.log(userProfile);
     setUser({
       ...user,
       name: userProfile.name,
@@ -205,7 +207,8 @@ export default function Profile({
                     edge="end"
                     aria-label="delete"
                     onClick={() => {
-                      handleDeleteAddress(address?.id);
+                      setFormAddress(address);
+                      setOpenDialog((o) => !o);
                     }}
                   >
                     <DeleteIcon />
@@ -236,6 +239,28 @@ export default function Profile({
         isNew={newAddress}
         errorFields={errorFields}
         setErrorFields={setErrorFields}
+      />
+      <ConfirmDialog
+        open={openDialog}
+        setOpen={setOpenDialog}
+        title={
+          <div className="flex items-center gap-2">
+            <WarningIcon color="warning" />
+            <span className="">Delete Address</span>
+          </div>
+        }
+        body={
+          <>
+            <div className="mb-4">Are you sure to delete address?</div>
+            <div className="grid justify-center">
+              <div>{formAddress.street}</div>
+              <div>{formAddress.city}</div>
+              <div>{formAddress.state}</div>
+              <div>{formAddress.zip}</div>
+            </div>
+          </>
+        }
+        handleConfirm={() => handleDeleteAddress(formAddress.id)}
       />
     </div>
   );
