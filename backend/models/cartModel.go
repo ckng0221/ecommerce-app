@@ -8,7 +8,6 @@ type Cart struct {
 	ProductID uint     `json:"product_id"`
 	Product   *Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
 	UserID    uint     `json:"user_id"`
-	Trial     string
 }
 
 type CartUpdate struct {
