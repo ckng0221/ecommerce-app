@@ -84,7 +84,7 @@ export default function Checkout({
       {checkoutItems.length > 0 ? (
         <>
           <div className="mb-8">
-            <div>Receiver: {user.name}</div>
+            <div className="mb-4">Receiver: {user.name}</div>
             <div>
               <BasicSelect
                 options={addresses}
