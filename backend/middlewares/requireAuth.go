@@ -5,6 +5,7 @@ import (
 	"ecommerce-app/config"
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -82,10 +83,13 @@ func RequireAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GerUserFromContext(r *http.Request) models.User {
+func GerUserFromContext(r *http.Request) (models.User, error) {
 	ctx := r.Context()
 
 	var userCtxKey CtxKey = "user"
-	user := ctx.Value(userCtxKey)
-	return user.(models.User)
+	userI := ctx.Value(userCtxKey)
+	if user, ok := userI.(models.User); ok {
+		return user, nil
+	}
+	return models.User{}, errors.New("cannot get user")
 }

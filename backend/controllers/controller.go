@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"ecommerce-app/initializers"
+	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
 	"errors"
@@ -71,6 +72,42 @@ func GetById[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gor
 		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+
+	jsend.Success(w, &modelObj)
+}
+
+func GetByIdRequireAuth(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, requireAuth bool) {
+	id := chi.URLParam(r, "id")
+
+	err := initializers.Db.Scopes(scope).First(&modelObj, id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			jsend.Fail(w, "Record not found", http.StatusBadRequest)
+			return
+		}
+		log.Println(err)
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if requireAuth {
+		var userId uint = 0
+		switch v := (modelObj).(type) {
+		case *models.Order:
+			userId = v.UserID
+		case *models.Cart:
+			userId = v.UserID
+		case *models.Address:
+			userId = v.UserID
+		default:
+			log.Println("Cannot match type")
+		}
+		err := requireOwner(r, fmt.Sprint(userId))
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 	}
 
 	jsend.Success(w, &modelObj)

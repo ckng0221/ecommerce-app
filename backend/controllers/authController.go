@@ -164,13 +164,13 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {
-	user := middlewares.GerUserFromContext(r)
+	user, _ := middlewares.GerUserFromContext(r)
 
 	jsend.Success(w, user, http.StatusOK)
 }
 
 func requireOwner(r *http.Request, ownerId string) error {
-	requestUser := middlewares.GerUserFromContext(r)
+	requestUser, _ := middlewares.GerUserFromContext(r)
 	if fmt.Sprint(requestUser.ID) != ownerId && requestUser.Role != "admin" {
 		return errors.New("forbidden")
 	}
@@ -178,7 +178,7 @@ func requireOwner(r *http.Request, ownerId string) error {
 }
 
 func requireAdmin(r *http.Request) error {
-	requestUser := middlewares.GerUserFromContext(r)
+	requestUser, _ := middlewares.GerUserFromContext(r)
 	if requestUser.Role != "admin" {
 		return errors.New("forbidden")
 	}
