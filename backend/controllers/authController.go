@@ -164,28 +164,22 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-	fmt.Println("ctx after", ctx)
-
-	// NOTE: the context key need to use the same type (using import)
-	var userCtxKey middlewares.CtxKey = "user"
-	user := ctx.Value(userCtxKey)
+	user := middlewares.GerUserFromContext(r)
 
 	jsend.Success(w, user, http.StatusOK)
 }
 
-func requireOwner(r *http.Request, ownerId uint) error {
-	requestUser := r.Context().Value("user")
-	if requestUser.(models.User).ID != ownerId && requestUser.(models.User).Role != "admin" {
+func requireOwner(r *http.Request, ownerId string) error {
+	requestUser := middlewares.GerUserFromContext(r)
+	if fmt.Sprint(requestUser.ID) != ownerId && requestUser.Role != "admin" {
 		return errors.New("forbidden")
 	}
 	return nil
 }
 
 func requireAdmin(r *http.Request) error {
-	requestUser := r.Context().Value("user")
-	if requestUser.(models.User).Role != "admin" {
+	requestUser := middlewares.GerUserFromContext(r)
+	if requestUser.Role != "admin" {
 		return errors.New("forbidden")
 	}
 	return nil

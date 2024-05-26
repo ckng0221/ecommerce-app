@@ -24,6 +24,7 @@ export default function Orders({ user }: IProps) {
   const [orders, setOrders] = useState<IOrder[]>([]);
   useEffect(() => {
     async function loadData() {
+      if (!user.id) return
       const res = await getOrders(user.id);
       if (res?.data?.status === "success") {
         // console.log(res.data.data);

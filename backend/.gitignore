@@ -25,3 +25,4 @@ ecommerce-app
 .env
 
 media/
+tmp/

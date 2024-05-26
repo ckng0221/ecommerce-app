@@ -2,6 +2,7 @@ package routers
 
 import (
 	"ecommerce-app/controllers"
+	"ecommerce-app/middlewares"
 
 	"github.com/go-chi/chi"
 )
@@ -9,13 +10,13 @@ import (
 func OrderRouter() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Get("/", controllers.GetOrders)
+	r.With(middlewares.RequireAuth).Get("/", controllers.GetOrders)
 
-	r.Post("/", controllers.CreateOrders())
+	r.With(middlewares.RequireAuth).Post("/", controllers.CreateOrders())
 
-	r.Get("/{id}", controllers.GetOrderById)
+	r.With(middlewares.RequireAuth).Get("/{id}", controllers.GetOrderById)
 
-	r.Patch("/{id}", controllers.UpdateOrderById())
+	r.With(middlewares.RequireAuth).Patch("/{id}", controllers.UpdateOrderById())
 
 	r.Delete("/{id}", controllers.DeleteOrderById())
 

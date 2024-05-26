@@ -59,6 +59,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		var user models.User
 		initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
 
+		fmt.Println("user", user.Name, user.ID)
 		if user.ID == 0 {
 			log.Println("User not found")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -68,10 +69,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		// Attach user to context
 		var userCtxKey CtxKey = "user"
 		ctx = context.WithValue(ctx, userCtxKey, user)
-		fmt.Println("ctx before", ctx)
 
-		user2 := ctx.Value(userCtxKey)
-		fmt.Println("user before", user2)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -82,4 +80,12 @@ func RequireAdmin(w http.ResponseWriter, r *http.Request) {
 		jsend.Fail(w, "", http.StatusForbidden)
 		return
 	}
+}
+
+func GerUserFromContext(r *http.Request) models.User {
+	ctx := r.Context()
+
+	var userCtxKey CtxKey = "user"
+	user := ctx.Value(userCtxKey)
+	return user.(models.User)
 }

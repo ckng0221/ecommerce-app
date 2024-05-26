@@ -5,6 +5,7 @@ import (
 	"ecommerce-app/utils"
 	"net/http"
 
+	"clevergo.tech/jsend"
 	"gorm.io/gorm"
 )
 
@@ -13,8 +14,19 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 
 	userId := r.URL.Query().Get("user_id")
 	if userId != "" {
+		err := requireOwner(r, userId)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 		scope = func(db *gorm.DB) *gorm.DB {
 			return db.Preload("Address").Preload("OrderItems.Product").Where("user_id = ?", userId).Order("id desc")
+		}
+	} else {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
 		}
 	}
 	GetAll[models.Order](w, r, scope)
