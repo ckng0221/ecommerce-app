@@ -23,7 +23,7 @@ func ConnectToDb() {
 	dsn := os.Getenv("DB_URL")
 	Db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
+			// SingularTable: true,
 		},
 		Logger: logger.Default.LogMode(logLevel),
 	})
