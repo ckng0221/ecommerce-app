@@ -4,7 +4,7 @@ import (
 	"ecommerce-app/controllers"
 	"ecommerce-app/middlewares"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func OrderRouter() *chi.Mux {
@@ -14,6 +14,7 @@ func OrderRouter() *chi.Mux {
 
 	r.With(middlewares.RequireAuth).Post("/", controllers.CreateOrders())
 
+	// r.Get("/{id}", controllers.GetOrderById)
 	r.With(middlewares.RequireAuth).Get("/{id}", controllers.GetOrderById)
 
 	r.With(middlewares.RequireAuth).Patch("/{id}", controllers.UpdateOrderById())

@@ -170,9 +170,12 @@ func Validate(w http.ResponseWriter, r *http.Request) {
 }
 
 func requireOwner(r *http.Request, ownerId string) error {
-	requestUser, _ := middlewares.GerUserFromContext(r)
+	requestUser, err := middlewares.GerUserFromContext(r)
+	if err != nil {
+		return errors.New("failed to get user from context")
+	}
 	if fmt.Sprint(requestUser.ID) != ownerId && requestUser.Role != "admin" {
-		return errors.New("forbidden")
+		return utils.ErrForbidden
 	}
 	return nil
 }
@@ -180,7 +183,7 @@ func requireOwner(r *http.Request, ownerId string) error {
 func requireAdmin(r *http.Request) error {
 	requestUser, _ := middlewares.GerUserFromContext(r)
 	if requestUser.Role != "admin" {
-		return errors.New("forbidden")
+		return utils.ErrForbidden
 	}
 	return nil
 }

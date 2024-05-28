@@ -74,7 +74,9 @@ func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCartById(w http.ResponseWriter, r *http.Request) {
-	GetById[models.Cart](w, r, utils.EmptyScope)
+	var cart models.Cart
+
+	GetById(w, r, utils.EmptyScope, &cart, true)
 }
 
 func UpdateCartById() func(w http.ResponseWriter, r *http.Request) {

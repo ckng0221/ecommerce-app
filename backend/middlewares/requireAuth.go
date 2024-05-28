@@ -23,11 +23,14 @@ func RequireAuth(next http.Handler) http.Handler {
 		bearerToken := bearerTokenArr[len(bearerTokenArr)-1]
 		apiKey := r.Header.Get("x-api-key")
 		actualApiKey := os.Getenv("ADMIN_API_KEY")
+		ctx := context.Background()
+		var userCtxKey CtxKey = "user"
+		var user models.User
+
 		if (apiKey == actualApiKey) && (actualApiKey != "") {
 			// Create a temp admin user object
-			type CtxKey string
-			var userCtxKey CtxKey = "user"
-			ctx := context.WithValue(r.Context(), userCtxKey, models.User{Role: "admin"})
+			user.Role = "admin"
+			ctx := context.WithValue(ctx, userCtxKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -39,7 +42,6 @@ func RequireAuth(next http.Handler) http.Handler {
 
 		// Decode/validate it
 		verifier := config.GetVerifier()
-		ctx := context.Background()
 
 		// JWT token from identify provider
 		idToken, err := verifier.Verify(ctx, bearerToken)
@@ -57,7 +59,6 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Find the user with token sub
-		var user models.User
 		initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
 
 		fmt.Println("user", user.Name, user.ID)
@@ -68,7 +69,6 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Attach user to context
-		var userCtxKey CtxKey = "user"
 		ctx = context.WithValue(ctx, userCtxKey, user)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -88,7 +88,9 @@ func GerUserFromContext(r *http.Request) (models.User, error) {
 
 	var userCtxKey CtxKey = "user"
 	userI := ctx.Value(userCtxKey)
+
 	if user, ok := userI.(models.User); ok {
+		fmt.Println("user", user)
 		return user, nil
 	}
 	return models.User{}, errors.New("cannot get user")

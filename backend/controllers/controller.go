@@ -12,7 +12,7 @@ import (
 	"net/http"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -58,27 +58,14 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 	jsend.Success(w, &modelObj, http.StatusCreated)
 }
 
-func GetById[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB) {
-	id := chi.URLParam(r, "id")
+func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, requireAuth bool) {
+	id := r.PathValue("id")
 
-	var modelObj T
-
-	err := initializers.Db.Scopes(scope).First(&modelObj, id).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			jsend.Fail(w, "Record not found", http.StatusBadRequest)
-			return
-		}
-		log.Println(err)
+	if id == "" {
+		log.Println("id is empty")
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-
-	jsend.Success(w, &modelObj)
-}
-
-func GetByIdRequireAuth(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, requireAuth bool) {
-	id := chi.URLParam(r, "id")
 
 	err := initializers.Db.Scopes(scope).First(&modelObj, id).Error
 	if err != nil {
@@ -100,13 +87,22 @@ func GetByIdRequireAuth(w http.ResponseWriter, r *http.Request, scope func(db *g
 			userId = v.UserID
 		case *models.Address:
 			userId = v.UserID
+		case *models.User:
+			userId = v.ID
 		default:
 			log.Println("Cannot match type")
 		}
 		err := requireOwner(r, fmt.Sprint(userId))
+
 		if err != nil {
-			jsend.Fail(w, "Forbidden", http.StatusForbidden)
-			return
+			if errors.Is(err, utils.ErrForbidden) {
+				jsend.Fail(w, "Forbidden", http.StatusForbidden)
+				return
+			} else {
+				log.Println(err.Error())
+				jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 

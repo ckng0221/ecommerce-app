@@ -3,7 +3,7 @@ package routers
 import (
 	"ecommerce-app/controllers"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func ProductRouter() *chi.Mux {

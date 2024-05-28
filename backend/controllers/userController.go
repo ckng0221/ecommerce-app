@@ -12,7 +12,7 @@ import (
 	"strconv"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -80,12 +80,14 @@ func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+
 	scope := utils.EmptyScope
 	scope = func(db *gorm.DB) *gorm.DB {
 		return db.Joins("DefaultAddress")
 	}
 
-	GetById[models.User](w, r, scope)
+	GetById(w, r, scope, &user, true)
 }
 
 func GetUserBySub(w http.ResponseWriter, r *http.Request) {
@@ -154,9 +156,11 @@ func DeleteUserById() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAddressById(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+
 	scope := utils.EmptyScope
 
-	GetById[models.Address](w, r, scope)
+	GetById(w, r, scope, &address, true)
 }
 
 func UpdateAddressById() func(w http.ResponseWriter, r *http.Request) {

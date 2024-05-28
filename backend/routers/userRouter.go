@@ -2,8 +2,9 @@ package routers
 
 import (
 	"ecommerce-app/controllers"
+	"ecommerce-app/middlewares"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func UserRouter() *chi.Mux {
@@ -15,7 +16,7 @@ func UserRouter() *chi.Mux {
 
 	r.Post("/signup", controllers.Signup)
 
-	r.Get("/{id}", controllers.GetUserById)
+	r.With(middlewares.RequireAuth).Get("/{id}", controllers.GetUserById)
 	r.Get("/sub/{sub}", controllers.GetUserBySub)
 
 	r.Get("/{id}/addresses", controllers.GetAddressesByUserId)

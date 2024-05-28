@@ -37,12 +37,13 @@ func CreateOrders() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOrderById(w http.ResponseWriter, r *http.Request) {
+
 	var scope = func(db *gorm.DB) *gorm.DB {
 		return db.Preload("OrderItems.Product").Preload("User").Preload("Address")
 	}
 	var order models.Order
 
-	GetByIdRequireAuth(w, r, scope, &order, true)
+	GetById(w, r, scope, &order, true)
 }
 
 func UpdateOrderById() func(w http.ResponseWriter, r *http.Request) {

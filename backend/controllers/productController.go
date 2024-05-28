@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +23,9 @@ func CreateProducts() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetProductById(w http.ResponseWriter, r *http.Request) {
-	GetById[models.Product](w, r, utils.EmptyScope)
+	var product models.Product
+
+	GetById(w, r, utils.EmptyScope, &product, false)
 }
 
 func UpdateProductById() func(w http.ResponseWriter, r *http.Request) {
