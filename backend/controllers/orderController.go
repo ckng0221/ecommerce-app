@@ -3,6 +3,7 @@ package controllers
 import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
+	"errors"
 	"net/http"
 
 	"clevergo.tech/jsend"
@@ -46,10 +47,29 @@ func GetOrderById(w http.ResponseWriter, r *http.Request) {
 	GetById(w, r, scope, &order, true)
 }
 
-func UpdateOrderById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.Order, models.OrderUpdate]
+func UpdateOrderById(w http.ResponseWriter, r *http.Request) {
+	err := requireAdmin(r)
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
+	var order models.Order
+	var orderUpdate models.OrderUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &order, &orderUpdate, false)
 }
 
-func DeleteOrderById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Order]
+func DeleteOrderById(w http.ResponseWriter, r *http.Request) {
+	err := requireAdmin(r)
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
+	DeleteById[models.Order](w, r)
 }

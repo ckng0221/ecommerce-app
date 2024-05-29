@@ -119,7 +119,7 @@ func GetAddressesByUserId(w http.ResponseWriter, r *http.Request) {
 
 func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	var address models.Address
-	id := chi.URLParam(r, "id")
+	id := r.PathValue("id")
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -147,8 +147,11 @@ func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	jsend.Success(w, address, http.StatusCreated)
 }
 
-func UpdateUserById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.User, models.UserUpdate]
+func UpdateUserById(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	var userUpdate models.UserUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &user, &userUpdate, true)
 }
 
 func DeleteUserById() func(w http.ResponseWriter, r *http.Request) {
@@ -163,8 +166,11 @@ func GetAddressById(w http.ResponseWriter, r *http.Request) {
 	GetById(w, r, scope, &address, true)
 }
 
-func UpdateAddressById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.Address, models.AddressUpdate]
+func UpdateAddressById(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+	var addressUpdate models.AddressUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &address, &addressUpdate, true)
 }
 
 func DeleteAddressById() func(w http.ResponseWriter, r *http.Request) {

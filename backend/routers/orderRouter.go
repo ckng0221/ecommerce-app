@@ -17,9 +17,9 @@ func OrderRouter() *chi.Mux {
 	// r.Get("/{id}", controllers.GetOrderById)
 	r.With(middlewares.RequireAuth).Get("/{id}", controllers.GetOrderById)
 
-	r.With(middlewares.RequireAuth).Patch("/{id}", controllers.UpdateOrderById())
+	r.With(middlewares.RequireAuth).Patch("/{id}", controllers.UpdateOrderById)
 
-	r.Delete("/{id}", controllers.DeleteOrderById())
+	r.With(middlewares.RequireAuth).Delete("/{id}", controllers.DeleteOrderById)
 
 	return r
 }

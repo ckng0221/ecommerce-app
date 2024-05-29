@@ -12,7 +12,6 @@ import (
 	"net/http"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -111,7 +110,7 @@ func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *go
 
 func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdName string, preloadName string) {
 	var modelObjs []T
-	id := chi.URLParam(r, "id")
+	id := r.PathValue("id")
 
 	paginationScope, error := utils.Paginate(r)
 	if error != nil {
@@ -124,11 +123,8 @@ func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdN
 	jsend.Success(w, &modelObjs)
 }
 
-func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-
-	var modelObj T
-	var modelUpdateObj TUpdate
+func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj, modelUpdateObj interface{}, requreOwner bool) {
+	id := r.PathValue("id")
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -152,13 +148,43 @@ func UpdateById[T Model, TUpdate Model](w http.ResponseWriter, r *http.Request) 
 		jsend.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	initializers.Db.Clauses(clause.Returning{}).Model(&modelObj).Updates(&modelUpdateObj)
-	jsend.Success(w, &modelObj)
+
+	if requreOwner {
+		// Note: those require admin, don't require owner
+		var userId uint = 0
+		switch v := (modelObj).(type) {
+
+		case *models.Cart:
+			userId = v.UserID
+		case *models.Address:
+			userId = v.UserID
+		case *models.User:
+			userId = v.ID
+		default:
+			log.Println("Cannot match type")
+		}
+		// fmt.Println("lalal", userId)
+		err := requireOwner(r, fmt.Sprint(userId))
+
+		if err != nil {
+			if errors.Is(err, utils.ErrForbidden) {
+				jsend.Fail(w, "Forbidden", http.StatusForbidden)
+				return
+			} else {
+				log.Println(err.Error())
+				jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	initializers.Db.Clauses(clause.Returning{}).Model(modelObj).Updates(modelUpdateObj)
+	jsend.Success(w, modelObj)
 
 }
 
 func DeleteById[T Model](w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	id := r.PathValue("id")
 
 	var modelObj T
 

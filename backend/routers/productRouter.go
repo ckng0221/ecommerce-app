@@ -15,7 +15,7 @@ func ProductRouter() *chi.Mux {
 
 	r.Get("/{id}", controllers.GetProductById)
 
-	r.Patch("/{id}", controllers.UpdateProductById())
+	r.Patch("/{id}", controllers.UpdateProductById)
 
 	r.Delete("/{id}", controllers.DeleteProductById())
 

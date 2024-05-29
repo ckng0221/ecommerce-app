@@ -5,12 +5,12 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
@@ -28,8 +28,19 @@ func GetProductById(w http.ResponseWriter, r *http.Request) {
 	GetById(w, r, utils.EmptyScope, &product, false)
 }
 
-func UpdateProductById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.Product, models.ProductUpdate]
+func UpdateProductById(w http.ResponseWriter, r *http.Request) {
+	var product models.Product
+	var orderUpdate models.ProductUpdate
+
+	err := requireAdmin(r)
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
+	UpdateById(w, r, utils.EmptyScope, &product, &orderUpdate, false)
 }
 
 func DeleteProductById() func(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +49,7 @@ func DeleteProductById() func(w http.ResponseWriter, r *http.Request) {
 
 func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id := r.PathValue("id")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
@@ -84,7 +95,7 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 
 func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id := r.PathValue("id")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
