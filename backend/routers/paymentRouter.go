@@ -2,6 +2,7 @@ package routers
 
 import (
 	"ecommerce-app/controllers"
+	"ecommerce-app/middlewares"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -9,7 +10,7 @@ import (
 func PaymentRouter() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Get("/", controllers.GetPayments)
+	r.With(middlewares.RequireAuth).Get("/", controllers.GetPayments)
 	r.Post("/checkout/session", controllers.CreatePaymentSession)
 	r.Post("/webhook", controllers.StripePaymentHook)
 	r.Post("/event/trigger", controllers.TriggerFakePaymentEvent)
