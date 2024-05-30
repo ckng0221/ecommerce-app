@@ -38,7 +38,6 @@ func CreateOrders() func(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOrderById(w http.ResponseWriter, r *http.Request) {
-
 	var scope = func(db *gorm.DB) *gorm.DB {
 		return db.Preload("OrderItems.Product").Preload("User").Preload("Address")
 	}

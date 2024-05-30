@@ -12,7 +12,7 @@ func UserRouter() *chi.Mux {
 
 	r.With(middlewares.RequireAuth).Get("/", controllers.GetUsers)
 
-	r.With(middlewares.RequireAuth).Post("/", controllers.CreateUser())
+	r.With(middlewares.RequireAuth).Post("/", controllers.CreateUser)
 
 	r.Post("/signup", controllers.Signup)
 

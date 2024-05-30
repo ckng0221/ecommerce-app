@@ -6,13 +6,13 @@ import (
 	"ecommerce-app/utils"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -68,11 +68,22 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
+	err := requireAdmin(r)
+	if err != nil {
+		jsend.Fail(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	GetAll[models.User](w, r, utils.EmptyScope)
 }
 
-func CreateUser() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.User]
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	err := requireAdmin(r)
+	if err != nil {
+		jsend.Fail(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	CreateOne[models.User](w, r)
 }
 
 func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +106,7 @@ func GetUserBySub(w http.ResponseWriter, r *http.Request) {
 		return db.Joins("DefaultAddress")
 	}
 
-	sub := chi.URLParam(r, "sub")
+	sub := r.PathValue("sub")
 
 	var user models.User
 
@@ -108,6 +119,19 @@ func GetUserBySub(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+
+	err = requireOwner(r, fmt.Sprint(user.ID))
+
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Println(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	jsend.Success(w, &user)
@@ -134,7 +158,19 @@ func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	}
 	uID, _ := strconv.ParseUint(id, 10, 32)
 	address.UserID = uint(uID)
-	log.Println(address)
+
+	// Require Owner
+	err = requireOwner(r, fmt.Sprint(uID))
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Println(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
 
 	result := initializers.Db.Model(&models.Address{}).Create(&address)
 	if result.Error != nil {

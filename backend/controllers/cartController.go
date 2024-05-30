@@ -5,6 +5,8 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,8 +22,19 @@ func GetCarts(w http.ResponseWriter, r *http.Request) {
 
 	userId := r.URL.Query().Get("user_id")
 	if userId != "" {
+		err := requireOwner(r, userId)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 		scope = func(db *gorm.DB) *gorm.DB {
 			return db.Preload("Product").Where("user_id = ?", userId)
+		}
+	} else {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
 		}
 	}
 
@@ -44,6 +57,19 @@ func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
+	}
+
+	// Require owner
+	err = requireOwner(r, fmt.Sprint(cart.UserID))
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Println(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Check if cart with productId exists
