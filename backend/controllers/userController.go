@@ -98,7 +98,7 @@ func GetUserById(w http.ResponseWriter, r *http.Request) {
 		return db.Joins("DefaultAddress")
 	}
 
-	GetById(w, r, scope, &user, true)
+	GetById(w, r, scope, &user, false, true)
 }
 
 func GetUserBySub(w http.ResponseWriter, r *http.Request) {
@@ -187,12 +187,12 @@ func UpdateUserById(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	var userUpdate models.UserUpdate
 
-	UpdateById(w, r, utils.EmptyScope, &user, &userUpdate, true)
+	UpdateById(w, r, utils.EmptyScope, &user, &userUpdate, false, true)
 }
 
 func DeleteUserById(w http.ResponseWriter, r *http.Request) {
 	var user models.User
-	DeleteById(w, r, utils.EmptyScope, &user, false, true)
+	DeleteById(w, r, utils.EmptyScope, &user, true, false)
 }
 
 func GetAddressById(w http.ResponseWriter, r *http.Request) {
@@ -200,20 +200,20 @@ func GetAddressById(w http.ResponseWriter, r *http.Request) {
 
 	scope := utils.EmptyScope
 
-	GetById(w, r, scope, &address, true)
+	GetById(w, r, scope, &address, false, true)
 }
 
 func UpdateAddressById(w http.ResponseWriter, r *http.Request) {
 	var address models.Address
 	var addressUpdate models.AddressUpdate
 
-	UpdateById(w, r, utils.EmptyScope, &address, &addressUpdate, true)
+	UpdateById(w, r, utils.EmptyScope, &address, &addressUpdate, false, true)
 }
 
 func DeleteAddressById(w http.ResponseWriter, r *http.Request) {
 	var address models.Address
 
-	DeleteById(w, r, utils.EmptyScope, &address, true, false)
+	DeleteById(w, r, utils.EmptyScope, &address, false, true)
 }
 
 func CreateAddress() func(w http.ResponseWriter, r *http.Request) {

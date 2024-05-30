@@ -57,7 +57,7 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 	jsend.Success(w, &modelObj, http.StatusCreated)
 }
 
-func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, needOwner bool) {
+func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, needAdmin, needOwner bool) {
 	id := r.PathValue("id")
 
 	if id == "" {
@@ -77,7 +77,13 @@ func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *go
 		return
 	}
 
-	if needOwner {
+	if needAdmin {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	} else if needOwner {
 		var userId uint = 0
 		switch v := (modelObj).(type) {
 		case *models.Order:
@@ -123,7 +129,7 @@ func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdN
 	jsend.Success(w, &modelObjs)
 }
 
-func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj, modelUpdateObj interface{}, needOwner bool) {
+func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj, modelUpdateObj interface{}, needAdmin, needOwner bool) {
 	id := r.PathValue("id")
 
 	body, err := io.ReadAll(r.Body)
@@ -149,7 +155,13 @@ func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) 
 		return
 	}
 
-	if needOwner {
+	if needAdmin {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	} else if needOwner {
 		// Note: those require admin, don't require owner
 		var userId uint = 0
 		switch v := (modelObj).(type) {
@@ -182,7 +194,8 @@ func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) 
 	jsend.Success(w, modelObj)
 
 }
-func DeleteById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, needOwner, needAdmin bool) {
+
+func DeleteById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, needAdmin, needOwner bool) {
 	id := r.PathValue("id")
 
 	err := initializers.Db.First(&modelObj, id).Error

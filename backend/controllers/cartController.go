@@ -102,17 +102,17 @@ func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {
 func GetCartById(w http.ResponseWriter, r *http.Request) {
 	var cart models.Cart
 
-	GetById(w, r, utils.EmptyScope, &cart, true)
+	GetById(w, r, utils.EmptyScope, &cart, false, true)
 }
 
 func UpdateCartById(w http.ResponseWriter, r *http.Request) {
 	var cart models.Cart
 	var cartUpdate models.CartUpdate
 
-	UpdateById(w, r, utils.EmptyScope, &cart, &cartUpdate, true)
+	UpdateById(w, r, utils.EmptyScope, &cart, &cartUpdate, false, true)
 }
 
 func DeleteCartById(w http.ResponseWriter, r *http.Request) {
 	var cart models.Cart
-	DeleteById(w, r, utils.EmptyScope, &cart, true, false)
+	DeleteById(w, r, utils.EmptyScope, &cart, false, true)
 }

@@ -5,7 +5,6 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
-	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -25,22 +24,14 @@ func CreateProducts() func(w http.ResponseWriter, r *http.Request) {
 func GetProductById(w http.ResponseWriter, r *http.Request) {
 	var product models.Product
 
-	GetById(w, r, utils.EmptyScope, &product, false)
+	GetById(w, r, utils.EmptyScope, &product, false, false)
 }
 
 func UpdateProductById(w http.ResponseWriter, r *http.Request) {
 	var product models.Product
 	var orderUpdate models.ProductUpdate
 
-	err := requireAdmin(r)
-	if err != nil {
-		if errors.Is(err, utils.ErrForbidden) {
-			jsend.Fail(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-	}
-
-	UpdateById(w, r, utils.EmptyScope, &product, &orderUpdate, false)
+	UpdateById(w, r, utils.EmptyScope, &product, &orderUpdate, true, false)
 }
 
 func DeleteProductById(w http.ResponseWriter, r *http.Request) {
