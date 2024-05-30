@@ -20,7 +20,7 @@ func CartRouter() *chi.Mux {
 
 	r.With(middlewares.RequireAuth).Patch("/{id}", controllers.UpdateCartById)
 
-	r.With(middlewares.RequireAuth).Delete("/{id}", controllers.DeleteCartById())
+	r.With(middlewares.RequireAuth).Delete("/{id}", controllers.DeleteCartById)
 
 	return r
 }

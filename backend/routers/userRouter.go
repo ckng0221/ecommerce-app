@@ -25,13 +25,13 @@ func UserRouter() *chi.Mux {
 
 	r.With(middlewares.RequireAuth).Patch("/{id}", controllers.UpdateUserById)
 
-	r.With(middlewares.RequireAuth).Delete("/{id}", controllers.DeleteUserById())
+	r.With(middlewares.RequireAuth).Delete("/{id}", controllers.DeleteUserById)
 
 	// Address
 	r.With(middlewares.RequireAuth).Get("/addresses/{id}", controllers.GetAddressById)
 	r.With(middlewares.RequireAuth).Post("/addresses", controllers.CreateAddress())
 	r.With(middlewares.RequireAuth).Patch("/addresses/{id}", controllers.UpdateAddressById)
-	r.With(middlewares.RequireAuth).Delete("/addresses/{id}", controllers.DeleteAddressById())
+	r.With(middlewares.RequireAuth).Delete("/addresses/{id}", controllers.DeleteAddressById)
 
 	return r
 }

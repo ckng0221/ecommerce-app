@@ -43,8 +43,9 @@ func UpdateProductById(w http.ResponseWriter, r *http.Request) {
 	UpdateById(w, r, utils.EmptyScope, &product, &orderUpdate, false)
 }
 
-func DeleteProductById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Product]
+func DeleteProductById(w http.ResponseWriter, r *http.Request) {
+	var product models.Product
+	DeleteById(w, r, utils.EmptyScope, &product, false, true)
 }
 
 func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {

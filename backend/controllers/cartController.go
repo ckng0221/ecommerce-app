@@ -112,6 +112,7 @@ func UpdateCartById(w http.ResponseWriter, r *http.Request) {
 	UpdateById(w, r, utils.EmptyScope, &cart, &cartUpdate, true)
 }
 
-func DeleteCartById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Cart]
+func DeleteCartById(w http.ResponseWriter, r *http.Request) {
+	var cart models.Cart
+	DeleteById(w, r, utils.EmptyScope, &cart, true, false)
 }

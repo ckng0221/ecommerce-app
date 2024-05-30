@@ -62,13 +62,7 @@ func UpdateOrderById(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteOrderById(w http.ResponseWriter, r *http.Request) {
-	err := requireAdmin(r)
-	if err != nil {
-		if errors.Is(err, utils.ErrForbidden) {
-			jsend.Fail(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-	}
+	var order models.Order
 
-	DeleteById[models.Order](w, r)
+	DeleteById(w, r, utils.EmptyScope, &order, false, true)
 }

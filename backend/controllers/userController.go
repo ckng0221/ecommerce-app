@@ -190,8 +190,9 @@ func UpdateUserById(w http.ResponseWriter, r *http.Request) {
 	UpdateById(w, r, utils.EmptyScope, &user, &userUpdate, true)
 }
 
-func DeleteUserById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.User]
+func DeleteUserById(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	DeleteById(w, r, utils.EmptyScope, &user, false, true)
 }
 
 func GetAddressById(w http.ResponseWriter, r *http.Request) {
@@ -209,8 +210,10 @@ func UpdateAddressById(w http.ResponseWriter, r *http.Request) {
 	UpdateById(w, r, utils.EmptyScope, &address, &addressUpdate, true)
 }
 
-func DeleteAddressById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Address]
+func DeleteAddressById(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+
+	DeleteById(w, r, utils.EmptyScope, &address, true, false)
 }
 
 func CreateAddress() func(w http.ResponseWriter, r *http.Request) {
