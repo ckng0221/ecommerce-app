@@ -31,22 +31,50 @@ func GetAll[T Model](w http.ResponseWriter, r *http.Request, scope func(db *gorm
 	jsend.Success(w, &modelObjs)
 }
 
-func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
-	var modelObj T
-
+func CreateOne(w http.ResponseWriter, r *http.Request, modelObj interface{}, needAdmin, needOwner bool) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	err = json.Unmarshal(body, &modelObj)
+	err = json.Unmarshal(body, modelObj)
 	if err != nil {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
 
-	result := initializers.Db.Model(&modelObj).Create(&modelObj)
+	if needAdmin {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	} else if needOwner {
+		var userId uint = 0
+		switch v := (modelObj).(type) {
+		case *models.Cart:
+			userId = v.UserID
+		case *models.Address:
+			userId = v.UserID
+		default:
+			log.Println("Cannot match type")
+		}
+		err := requireOwner(r, fmt.Sprint(userId))
+
+		if err != nil {
+			if errors.Is(err, utils.ErrForbidden) {
+				jsend.Fail(w, "Forbidden", http.StatusForbidden)
+				return
+			} else {
+				log.Println(err.Error())
+				jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	result := initializers.Db.Model(modelObj).Create(modelObj)
 	if result.Error != nil {
 		log.Println(result.Error)
 
@@ -54,7 +82,7 @@ func CreateOne[T Model](w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsend.Success(w, &modelObj, http.StatusCreated)
+	jsend.Success(w, modelObj, http.StatusCreated)
 }
 
 func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, needAdmin, needOwner bool) {
@@ -66,7 +94,7 @@ func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *go
 		return
 	}
 
-	err := initializers.Db.Scopes(scope).First(&modelObj, id).Error
+	err := initializers.Db.Scopes(scope).First(modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			jsend.Fail(w, "Record not found", http.StatusBadRequest)
@@ -111,7 +139,7 @@ func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *go
 		}
 	}
 
-	jsend.Success(w, &modelObj)
+	jsend.Success(w, modelObj)
 }
 
 func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdName string, preloadName string) {
@@ -138,13 +166,13 @@ func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) 
 		return
 	}
 
-	err = json.Unmarshal(body, &modelUpdateObj)
+	err = json.Unmarshal(body, modelUpdateObj)
 	if err != nil {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
 	}
 
-	err = initializers.Db.First(&modelObj, id).Error
+	err = initializers.Db.First(modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			jsend.Fail(w, "Record not found", http.StatusNotFound)
@@ -192,13 +220,12 @@ func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) 
 
 	initializers.Db.Clauses(clause.Returning{}).Model(modelObj).Updates(modelUpdateObj)
 	jsend.Success(w, modelObj)
-
 }
 
 func DeleteById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj interface{}, needAdmin, needOwner bool) {
 	id := r.PathValue("id")
 
-	err := initializers.Db.First(&modelObj, id).Error
+	err := initializers.Db.First(modelObj, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			jsend.Fail(w, "Record not found", http.StatusNotFound)
@@ -245,7 +272,7 @@ func DeleteById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) 
 		}
 	}
 
-	result := initializers.Db.Delete(&modelObj, id)
+	result := initializers.Db.Delete(modelObj, id)
 	if result.Error != nil {
 		log.Println(err)
 

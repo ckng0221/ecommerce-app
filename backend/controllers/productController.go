@@ -17,8 +17,9 @@ func GetProducts(w http.ResponseWriter, r *http.Request) {
 	GetAll[models.Product](w, r, utils.EmptyScope)
 }
 
-func CreateProducts() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Product]
+func CreateProducts(w http.ResponseWriter, r *http.Request) {
+	var product models.Product
+	CreateOne(w, r, &product, true, false)
 }
 
 func GetProductById(w http.ResponseWriter, r *http.Request) {

@@ -41,8 +41,9 @@ func GetCarts(w http.ResponseWriter, r *http.Request) {
 	GetAll[models.Cart](w, r, scope)
 }
 
-func CreateCarts() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Cart]
+func CreateCarts(w http.ResponseWriter, r *http.Request) {
+	var cart models.Cart
+	CreateOne(w, r, &cart, false, true)
 }
 
 func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {

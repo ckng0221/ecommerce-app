@@ -12,7 +12,7 @@ func OrderRouter() *chi.Mux {
 
 	r.With(middlewares.RequireAuth).Get("/", controllers.GetOrders)
 
-	r.With(middlewares.RequireAuth).Post("/", controllers.CreateOrders())
+	r.With(middlewares.RequireAuth).Post("/", controllers.CreateOrders)
 
 	// r.Get("/{id}", controllers.GetOrderById)
 	r.With(middlewares.RequireAuth).Get("/{id}", controllers.GetOrderById)

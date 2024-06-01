@@ -12,7 +12,7 @@ func CartRouter() *chi.Mux {
 
 	r.With(middlewares.RequireAuth).Get("/", controllers.GetCarts)
 
-	r.With(middlewares.RequireAuth).Post("/", controllers.CreateCarts())
+	r.With(middlewares.RequireAuth).Post("/", controllers.CreateCarts)
 
 	r.With(middlewares.RequireAuth).Post("/add", controllers.CreateOrAddCart)
 

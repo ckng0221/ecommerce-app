@@ -77,17 +77,14 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	err := requireAdmin(r)
-	if err != nil {
-		jsend.Fail(w, "Forbidden", http.StatusForbidden)
-		return
-	}
 
-	CreateOne[models.User](w, r)
+	var user models.User
+	CreateOne(w, r, &user, true, false)
 }
 
-func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Address]
+func CreateUserAddress(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+	CreateOne(w, r, &address, false, true)
 }
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +213,8 @@ func DeleteAddressById(w http.ResponseWriter, r *http.Request) {
 	DeleteById(w, r, utils.EmptyScope, &address, false, true)
 }
 
-func CreateAddress() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Address]
+func CreateAddress(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+
+	CreateOne(w, r, &address, false, true)
 }

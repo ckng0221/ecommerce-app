@@ -32,8 +32,9 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 	GetAll[models.Order](w, r, scope)
 }
 
-func CreateOrders() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Order]
+func CreateOrders(w http.ResponseWriter, r *http.Request) {
+	var order models.Order
+	CreateOne(w, r, &order, true, false)
 }
 
 func GetOrderById(w http.ResponseWriter, r *http.Request) {

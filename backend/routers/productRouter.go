@@ -12,7 +12,7 @@ func ProductRouter() *chi.Mux {
 
 	r.Get("/", controllers.GetProducts)
 
-	r.With(middlewares.RequireAuth).Post("/", controllers.CreateProducts())
+	r.With(middlewares.RequireAuth).Post("/", controllers.CreateProducts)
 
 	r.Get("/{id}", controllers.GetProductById)
 
