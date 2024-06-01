@@ -5,7 +5,7 @@ import (
 	"ecommerce-app/config"
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
-	"fmt"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -22,11 +22,14 @@ func RequireAuth(next http.Handler) http.Handler {
 		bearerToken := bearerTokenArr[len(bearerTokenArr)-1]
 		apiKey := r.Header.Get("x-api-key")
 		actualApiKey := os.Getenv("ADMIN_API_KEY")
+		ctx := context.Background()
+		var userCtxKey CtxKey = "user"
+		var user models.User
+
 		if (apiKey == actualApiKey) && (actualApiKey != "") {
 			// Create a temp admin user object
-			type CtxKey string
-			var userCtxKey CtxKey = "user"
-			ctx := context.WithValue(r.Context(), userCtxKey, models.User{Role: "admin"})
+			user.Role = "admin"
+			ctx := context.WithValue(ctx, userCtxKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -38,7 +41,6 @@ func RequireAuth(next http.Handler) http.Handler {
 
 		// Decode/validate it
 		verifier := config.GetVerifier()
-		ctx := context.Background()
 
 		// JWT token from identify provider
 		idToken, err := verifier.Verify(ctx, bearerToken)
@@ -50,15 +52,15 @@ func RequireAuth(next http.Handler) http.Handler {
 		var claims config.IDTokenClaims
 		if err := idToken.Claims(&claims); err != nil {
 			// handle error
-			fmt.Printf("Sub not found")
+			log.Printf("Sub not found")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		// Find the user with token sub
-		var user models.User
 		initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
 
+		// log.Println("user", user.Name, user.ID)
 		if user.ID == 0 {
 			log.Println("User not found")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -66,19 +68,34 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Attach user to context
-		var userCtxKey CtxKey = "user"
 		ctx = context.WithValue(ctx, userCtxKey, user)
-		fmt.Println("ctx before", ctx)
 
-		user2 := ctx.Value(userCtxKey)
-		fmt.Println("user before", user2)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
+func GerUserFromContext(r *http.Request) (models.User, error) {
+	ctx := r.Context()
+
+	var userCtxKey CtxKey = "user"
+	userI := ctx.Value(userCtxKey)
+
+	if user, ok := userI.(models.User); ok {
+		// fmt.Println("user", user)
+		return user, nil
+	}
+	return models.User{}, errors.New("failed get user")
+}
+
 func RequireAdmin(w http.ResponseWriter, r *http.Request) {
-	requestUser := r.Context().Value("user")
-	if requestUser.(models.User).Role != "admin" {
+	requestUser, err := GerUserFromContext(r)
+	if err != nil {
+		log.Println(err.Error())
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if requestUser.Role != "admin" {
 		jsend.Fail(w, "", http.StatusForbidden)
 		return
 	}

@@ -5,6 +5,8 @@ import (
 	"ecommerce-app/models"
 	"ecommerce-app/utils"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,16 +22,28 @@ func GetCarts(w http.ResponseWriter, r *http.Request) {
 
 	userId := r.URL.Query().Get("user_id")
 	if userId != "" {
+		err := requireOwner(r, userId)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 		scope = func(db *gorm.DB) *gorm.DB {
 			return db.Preload("Product").Where("user_id = ?", userId)
+		}
+	} else {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
 		}
 	}
 
 	GetAll[models.Cart](w, r, scope)
 }
 
-func CreateCarts() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Cart]
+func CreateCarts(w http.ResponseWriter, r *http.Request) {
+	var cart models.Cart
+	CreateOne(w, r, &cart, false, true)
 }
 
 func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +58,19 @@ func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
 		return
+	}
+
+	// Require owner
+	err = requireOwner(r, fmt.Sprint(cart.UserID))
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Println(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Check if cart with productId exists
@@ -74,13 +101,19 @@ func CreateOrAddCart(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCartById(w http.ResponseWriter, r *http.Request) {
-	GetById[models.Cart](w, r, utils.EmptyScope)
+	var cart models.Cart
+
+	GetById(w, r, utils.EmptyScope, &cart, false, true)
 }
 
-func UpdateCartById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.Cart, models.CartUpdate]
+func UpdateCartById(w http.ResponseWriter, r *http.Request) {
+	var cart models.Cart
+	var cartUpdate models.CartUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &cart, &cartUpdate, false, true)
 }
 
-func DeleteCartById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Cart]
+func DeleteCartById(w http.ResponseWriter, r *http.Request) {
+	var cart models.Cart
+	DeleteById(w, r, utils.EmptyScope, &cart, false, true)
 }

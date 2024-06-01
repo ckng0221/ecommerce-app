@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi"
 	"gorm.io/gorm"
 )
 
@@ -18,25 +17,32 @@ func GetProducts(w http.ResponseWriter, r *http.Request) {
 	GetAll[models.Product](w, r, utils.EmptyScope)
 }
 
-func CreateProducts() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Product]
+func CreateProducts(w http.ResponseWriter, r *http.Request) {
+	var product models.Product
+	CreateOne(w, r, &product, true, false)
 }
 
 func GetProductById(w http.ResponseWriter, r *http.Request) {
-	GetById[models.Product](w, r, utils.EmptyScope)
+	var product models.Product
+
+	GetById(w, r, utils.EmptyScope, &product, false, false)
 }
 
-func UpdateProductById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.Product, models.ProductUpdate]
+func UpdateProductById(w http.ResponseWriter, r *http.Request) {
+	var product models.Product
+	var orderUpdate models.ProductUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &product, &orderUpdate, true, false)
 }
 
-func DeleteProductById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Product]
+func DeleteProductById(w http.ResponseWriter, r *http.Request) {
+	var product models.Product
+	DeleteById(w, r, utils.EmptyScope, &product, false, true)
 }
 
 func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id := r.PathValue("id")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
@@ -82,7 +88,7 @@ func ConsumeProductStock() func(w http.ResponseWriter, r *http.Request) {
 
 func AddProductStock() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id := r.PathValue("id")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			jsend.Fail(w, "Invalid request body", http.StatusBadRequest)

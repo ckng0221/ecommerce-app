@@ -6,13 +6,13 @@ import (
 	"ecommerce-app/utils"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 
 	"clevergo.tech/jsend"
-	"github.com/go-chi/chi"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -68,24 +68,34 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
+	err := requireAdmin(r)
+	if err != nil {
+		jsend.Fail(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	GetAll[models.User](w, r, utils.EmptyScope)
 }
 
-func CreateUser() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.User]
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+
+	var user models.User
+	CreateOne(w, r, &user, true, false)
 }
 
-func CreateUserAddress() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Address]
+func CreateUserAddress(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+	CreateOne(w, r, &address, false, true)
 }
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+
 	scope := utils.EmptyScope
 	scope = func(db *gorm.DB) *gorm.DB {
 		return db.Joins("DefaultAddress")
 	}
 
-	GetById[models.User](w, r, scope)
+	GetById(w, r, scope, &user, false, true)
 }
 
 func GetUserBySub(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +103,7 @@ func GetUserBySub(w http.ResponseWriter, r *http.Request) {
 		return db.Joins("DefaultAddress")
 	}
 
-	sub := chi.URLParam(r, "sub")
+	sub := r.PathValue("sub")
 
 	var user models.User
 
@@ -108,16 +118,30 @@ func GetUserBySub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = requireOwner(r, fmt.Sprint(user.ID))
+
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Println(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	jsend.Success(w, &user)
 }
 
 func GetAddressesByUserId(w http.ResponseWriter, r *http.Request) {
-	GetChildrenById[models.Address](w, r, "user_id", "User")
+	var addresses []models.Address
+	GetChildrenById(w, r, utils.EmptyScope, &addresses, "user_id", false, true)
 }
 
 func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	var address models.Address
-	id := chi.URLParam(r, "id")
+	id := r.PathValue("id")
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -132,7 +156,19 @@ func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	}
 	uID, _ := strconv.ParseUint(id, 10, 32)
 	address.UserID = uint(uID)
-	log.Println(address)
+
+	// Require Owner
+	err = requireOwner(r, fmt.Sprint(uID))
+	if err != nil {
+		if errors.Is(err, utils.ErrForbidden) {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Println(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
 
 	result := initializers.Db.Model(&models.Address{}).Create(&address)
 	if result.Error != nil {
@@ -145,28 +181,41 @@ func CreateAddressByUserId(w http.ResponseWriter, r *http.Request) {
 	jsend.Success(w, address, http.StatusCreated)
 }
 
-func UpdateUserById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.User, models.UserUpdate]
+func UpdateUserById(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	var userUpdate models.UserUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &user, &userUpdate, false, true)
 }
 
-func DeleteUserById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.User]
+func DeleteUserById(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	DeleteById(w, r, utils.EmptyScope, &user, true, false)
 }
 
 func GetAddressById(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+
 	scope := utils.EmptyScope
 
-	GetById[models.Address](w, r, scope)
+	GetById(w, r, scope, &address, false, true)
 }
 
-func UpdateAddressById() func(w http.ResponseWriter, r *http.Request) {
-	return UpdateById[models.Address, models.AddressUpdate]
+func UpdateAddressById(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+	var addressUpdate models.AddressUpdate
+
+	UpdateById(w, r, utils.EmptyScope, &address, &addressUpdate, false, true)
 }
 
-func DeleteAddressById() func(w http.ResponseWriter, r *http.Request) {
-	return DeleteById[models.Address]
+func DeleteAddressById(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+
+	DeleteById(w, r, utils.EmptyScope, &address, false, true)
 }
 
-func CreateAddress() func(w http.ResponseWriter, r *http.Request) {
-	return CreateOne[models.Address]
+func CreateAddress(w http.ResponseWriter, r *http.Request) {
+	var address models.Address
+
+	CreateOne(w, r, &address, false, true)
 }

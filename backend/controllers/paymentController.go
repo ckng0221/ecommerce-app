@@ -369,5 +369,10 @@ func processPaymentEvent(event stripe.Event) error {
 }
 
 func GetPayments(w http.ResponseWriter, r *http.Request) {
+	err := requireAdmin(r)
+	if err != nil {
+		jsend.Fail(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	GetAll[models.Payment](w, r, utils.EmptyScope)
 }
