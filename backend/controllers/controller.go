@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"clevergo.tech/jsend"
 	"gorm.io/gorm"
@@ -142,19 +143,47 @@ func GetById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *go
 	jsend.Success(w, modelObj)
 }
 
-func GetChildrenById[T Model](w http.ResponseWriter, r *http.Request, chilrenIdName string, preloadName string) {
-	var modelObjs []T
+func GetChildrenById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObjs interface{}, chilrenIdName string, needAdmin, needOwner bool) {
 	id := r.PathValue("id")
 
-	paginationScope, error := utils.Paginate(r)
-	if error != nil {
-		jsend.Fail(w, error.Error(), http.StatusBadRequest)
+	if needAdmin {
+		err := requireAdmin(r)
+		if err != nil {
+			jsend.Fail(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	} else if needOwner {
+		var userId uint = 0
+		switch (modelObjs).(type) {
+		case *[]models.Address:
+			userId64, _ := strconv.ParseUint(id, 10, 32)
+			userId = uint(userId64)
+		default:
+			log.Println("Cannot match type")
+		}
+		err := requireOwner(r, fmt.Sprint(userId))
+
+		if err != nil {
+			if errors.Is(err, utils.ErrForbidden) {
+				jsend.Fail(w, "Forbidden", http.StatusForbidden)
+				return
+			} else {
+				log.Println(err.Error())
+				jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	paginationScope, err := utils.Paginate(r)
+	if err != nil {
+		jsend.Fail(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	expression := fmt.Sprintf("%s = ?", chilrenIdName)
-	initializers.Db.Scopes(paginationScope).Where(expression, id).Find(&modelObjs)
-	jsend.Success(w, &modelObjs)
+	initializers.Db.Scopes(paginationScope, scope).Where(expression, id).Find(modelObjs)
+	jsend.Success(w, modelObjs)
 }
 
 func UpdateById(w http.ResponseWriter, r *http.Request, scope func(db *gorm.DB) *gorm.DB, modelObj, modelUpdateObj interface{}, needAdmin, needOwner bool) {
