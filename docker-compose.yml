@@ -1,0 +1,59 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_BACKEND_BASE_URL=http://ecommerce-app.127.0.0.1.nip.io/api
+    ports:
+      - 80:80
+    networks:
+      - backend
+      - frontend
+    depends_on:
+      - backend
+
+  backend:
+    restart: always
+    build:
+      context: ./backend
+      args:
+        service: backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_URL=dbuser:dbuser123@tcp(mysql:3306)/ecommerce_app?charset=utf8mb4&parseTime=True&loc=UTC
+      - LOGIN_REDIRECT_URL="http://ecommerce-app.127.0.0.1.nip.io"
+      - FRONTEND_BASE_URL="http://ecommerce-app.127.0.0.1.nip.io"
+    # Withoout port exposed, can only access in the internal network
+    # ports:
+    #   - 8000:8000
+    networks:
+      - backend
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD_ENCRYPTED: false
+      MYSQL_DATABASE: "ecommerce_app"
+      MYSQL_USER: "dbuser"
+      MYSQL_ROOT_PASSWORD: "dbuser123"
+      MYSQL_PASSWORD: "dbuser123"
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    ports: #only for local testing
+      - "3309:3306"
+    volumes:
+      - mysql-db:/var/lib/mysql
+    networks:
+      - backend
+
+# optional network, just for extra scoping in more complicated case
+volumes:
+  mysql-db:
+networks:
+  frontend:
+  backend:
+# docker compose up -d
+# docker compose down
