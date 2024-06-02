@@ -80,3 +80,11 @@ docker compose down
 # To access the docker applications on local, could browser:
 http://ecommerce-app.127.0.0.1.nip.io
 ```
+
+# Contributing
+
+Contributions are welcome! If you'd like to contribute to this project, please follow the guidelines outlined in CONTRIBUTING.md.
+
+# License
+
+This project is licensed under the MIT License.

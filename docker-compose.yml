@@ -19,7 +19,8 @@ services:
       args:
         service: backend
     env_file:
-      - ./backend/.env
+      - path: ./backend/.env
+        required: false
     environment:
       - DB_URL=dbuser:dbuser123@tcp(mysql:3306)/ecommerce_app?charset=utf8mb4&parseTime=True&loc=UTC
       - LOGIN_REDIRECT_URL="http://ecommerce-app.127.0.0.1.nip.io"
