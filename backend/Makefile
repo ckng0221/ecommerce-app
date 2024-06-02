@@ -1,6 +1,6 @@
 # Server
 server_dev:
-	air
+	CompileDaemon -command="./ecommerce-app" 
 
 test_stock_update:
 	autocannon -c 100 -a 1000 -m "POST" http://localhost:8000/products/1/stock \
