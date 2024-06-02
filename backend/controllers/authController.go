@@ -16,6 +16,7 @@ import (
 
 	"clevergo.tech/jsend"
 	"github.com/coreos/go-oidc"
+	"golang.org/x/oauth2"
 )
 
 // login when having cookies
@@ -50,7 +51,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenClaims, idToken, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
+	tokenClaims, idToken, refreshToken, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
 	if err != nil {
 		log.Print(err.Error())
 		jsend.Fail(w, err, http.StatusUnauthorized)
@@ -86,8 +87,21 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 
+	if refreshToken != "" {
+		refreshTokenCookie := http.Cookie{
+			Name:     "RefreshToken",
+			Value:    refreshToken,
+			MaxAge:   3600 * 24 * 30,
+			Path:     "/",
+			Domain:   "",
+			Secure:   false,
+			HttpOnly: false,
+		}
+		http.SetCookie(w, &refreshTokenCookie)
+	}
+
 	// respond
-	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": idToken})
+	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": idToken, "refresh_token": refreshToken})
 }
 
 // Google login first > user login
@@ -114,7 +128,12 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := config.AuthCodeURL(state, oidc.Nonce(nonce))
+	url := config.AuthCodeURL(
+		state,
+		oidc.Nonce(nonce),
+		oauth2.SetAuthURLParam("access_type", "offline"), // To get refresh token
+		// oauth2.SetAuthURLParam("prompt", "select_account"),
+	)
 
 	jsend.Success(w, map[string]string{
 		"state": state,
@@ -123,9 +142,9 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.IDTokenClaims, string, error) {
+func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.IDTokenClaims, string, string, error) {
 	if state != cookieState {
-		return config.IDTokenClaims{}, "", errors.New("state does not match")
+		return config.IDTokenClaims{}, "", "", errors.New("state does not match")
 	}
 	ctx := context.Background()
 	authConfig, _ := config.GoogleConfig()
@@ -133,34 +152,43 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 
 	oauth2Token, err := authConfig.Exchange(ctx, code)
 	if err != nil {
-		return config.IDTokenClaims{}, "", err
+		return config.IDTokenClaims{}, "", "", err
 	}
 
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 	if !ok {
 		log.Println("No id_token field in oauth2 token.")
-		return config.IDTokenClaims{}, "", err
+		return config.IDTokenClaims{}, "", "", err
 	}
+
+	fmt.Println("access", oauth2Token.AccessToken)
+
+	rawRefreshToken, ok := oauth2Token.Extra("refresh_token").(string)
+	if !ok {
+		log.Println("No refresh token field in oauth2 token.")
+		// return config.IDTokenClaims{}, "", "", err
+	}
+	// fmt.Println(rawRefreshToken)
 
 	// JWT token from identify provider
 	idToken, err := verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		log.Println("Failed to verify id token", err)
-		return config.IDTokenClaims{}, "", err
+		return config.IDTokenClaims{}, "", "", err
 	}
 
 	if idToken.Nonce != nonce {
-		return config.IDTokenClaims{}, "", errors.New("nonce does not match")
+		return config.IDTokenClaims{}, "", "", errors.New("nonce does not match")
 	}
 
 	var tokenClaims config.IDTokenClaims
 	if err := idToken.Claims(&tokenClaims); err != nil {
 		// handle error
 		log.Println("Failed to unmarshal claim")
-		return config.IDTokenClaims{}, "", err
+		return config.IDTokenClaims{}, "", "", err
 	}
 
-	return tokenClaims, rawIDToken, nil
+	return tokenClaims, rawIDToken, rawRefreshToken, nil
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {

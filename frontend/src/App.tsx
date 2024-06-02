@@ -18,8 +18,6 @@ import { getCookie } from "./utils/common";
 import Profile from "./pages/Profile";
 import toast from "react-hot-toast";
 
-//TODO: add profile page, need to able to add address
-
 function App() {
   const [carts, setCarts] = useState<ICart[]>([]);
   const [checkoutItems, setCheckoutItems] = useState<ICheckoutItem[]>([]);

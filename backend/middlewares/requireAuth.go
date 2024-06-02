@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"clevergo.tech/jsend"
+	"github.com/coreos/go-oidc/v3/oidc"
 )
 
 type CtxKey string
@@ -43,16 +44,25 @@ func RequireAuth(next http.Handler) http.Handler {
 		verifier := config.GetVerifier()
 
 		// JWT token from identify provider
+		// TODO: verify access token instead of id token
 		idToken, err := verifier.Verify(ctx, bearerToken)
 		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
+			if errors.Is(err, &oidc.TokenExpiredError{}) {
+				log.Print(err.Error())
+				log.Print("Token has expired")
+				http.Error(w, "Token has expired", http.StatusUnauthorized)
+				return
+			} else {
+				log.Print(err.Error())
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
 		}
 
 		var claims config.IDTokenClaims
 		if err := idToken.Claims(&claims); err != nil {
 			// handle error
-			log.Printf("Sub not found")
+			log.Printf("failed to parse claims")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
