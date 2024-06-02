@@ -68,7 +68,8 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Find the user with token sub
-		initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
+		// initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
+		initializers.Db.Where("sub = ?", claims.Sub).First(&user)
 
 		// log.Println("user", user.Name, user.ID)
 		if user.ID == 0 {

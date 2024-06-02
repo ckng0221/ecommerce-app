@@ -8,10 +8,11 @@ import (
 func SynDatabase() {
 	env := os.Getenv("ENV")
 	if env == "local" {
+		// NOTE: may fail to migrate for complex FK dependency all together
 		Db.AutoMigrate(
+			&models.Address{},
 			&models.Product{},
 			&models.User{},
-			&models.Address{},
 			&models.Cart{},
 			&models.Order{},
 			&models.OrderItem{},
