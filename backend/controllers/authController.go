@@ -132,7 +132,7 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		state,
 		oidc.Nonce(nonce),
 		oauth2.SetAuthURLParam("access_type", "offline"), // To get refresh token
-		oauth2.SetAuthURLParam("prompt", "select_account"),
+		// oauth2.SetAuthURLParam("prompt", "select_account"),
 	)
 
 	jsend.Success(w, map[string]string{
