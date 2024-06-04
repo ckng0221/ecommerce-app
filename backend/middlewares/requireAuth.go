@@ -79,8 +79,12 @@ func RequireAuth(next http.Handler) http.Handler {
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 		if err != nil {
+			if err.Error() == "Token is expired" {
+				jsend.Fail(w, "token expired", http.StatusUnauthorized)
+				return
+			}
 			// return
-			fmt.Println("Token not found")
+			log.Println(err.Error())
 			jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -88,8 +92,8 @@ func RequireAuth(next http.Handler) http.Handler {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			// Check the exp
 			if float64(time.Now().Unix()) > claims["exp"].(float64) {
-				fmt.Println("Token expired")
-				jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+				fmt.Println("token expired")
+				jsend.Fail(w, "token expired", http.StatusUnauthorized)
 				return
 			}
 

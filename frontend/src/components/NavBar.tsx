@@ -36,6 +36,7 @@ export default function NavBar({
   function logoutAction() {
     const cookies = new Cookies();
     cookies.remove("Authorization");
+    cookies.remove("RefreshToken");
     navigate("/");
     setUser({ id: "", name: "", default_address_id: "" });
     toast.success("Logged out!");

@@ -80,8 +80,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// generate jwt
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.Sub,
-		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"name": user.Name,
+		"sub":  user.Sub,
+		"exp":  time.Now().Add(time.Hour).Unix(), // 1 hour
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
@@ -92,6 +93,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Refresh token
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.Sub,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days
+	})
+	refreshTokenString, err := refreshToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		log.Print(err.Error())
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 	// Set cookies
 	cookie := http.Cookie{
 		Name:     "Authorization",
@@ -104,8 +116,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 
+	refreshTokenCookie := http.Cookie{
+		Name:     "RefreshToken",
+		Value:    refreshTokenString,
+		MaxAge:   3600 * 24 * 30,
+		Path:     "/",
+		Domain:   "",
+		Secure:   false,
+		HttpOnly: false,
+	}
+	http.SetCookie(w, &refreshTokenCookie)
+
 	// respond
-	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": tokenString})
+	jsend.Success(w, map[string]string{"name": tokenClaims.Name,
+		"sub": tokenClaims.Sub, "access_token": tokenString, "refresh_token": refreshTokenString})
 }
 
 // Google login first > user login
@@ -199,6 +223,93 @@ func Validate(w http.ResponseWriter, r *http.Request) {
 	user, _ := middlewares.GerUserFromContext(r)
 
 	jsend.Success(w, user, http.StatusOK)
+}
+
+func RefreshExpiredToken(w http.ResponseWriter, r *http.Request) {
+	reqBody := struct {
+		RefreshToken string `json:"refresh_token"`
+	}{}
+	body, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body, &reqBody)
+	if err != nil {
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	token, err := jwt.Parse(reqBody.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil {
+		// return
+		fmt.Println("Token not found")
+		jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		// Check the exp
+		if float64(time.Now().Unix()) > claims["exp"].(float64) {
+			fmt.Println("token expired")
+			jsend.Fail(w, "token exipred", http.StatusUnauthorized)
+			return
+		}
+
+		// Find the user with token sub
+		var user models.User
+		// initializers.Db.First(&user, claims["sub"])
+		initializers.Db.Where("sub = ?", claims["sub"]).First(&user)
+
+		if user.ID == 0 {
+			fmt.Println("User not found")
+			jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Attach to req
+		// generate new jwt
+		jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"name": user.Name,
+			"sub":  user.Sub,
+			"exp":  time.Now().Add(time.Hour).Unix(), // 1 hour
+		})
+		// Sign and get the complete encoded token as a string using the secret
+		tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+		if err != nil {
+			log.Print(err.Error())
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Set cookies
+		cookie := http.Cookie{
+			Name:     "Authorization",
+			Value:    tokenString,
+			MaxAge:   3600 * 24 * 30,
+			Path:     "/",
+			Domain:   "",
+			Secure:   false,
+			HttpOnly: false,
+		}
+		http.SetCookie(w, &cookie)
+
+		jsend.Success(w, map[string]string{"access_token": tokenString})
+
+	} else {
+		jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 }
 
 func requireOwner(r *http.Request, ownerId string) error {

@@ -1,3 +1,4 @@
+import { getCookie } from "../utils/common";
 import { getApi } from "./api";
 import Cookies from "universal-cookie";
 
@@ -43,14 +44,14 @@ export async function login(
         withCredentials: true,
       }
     );
-    if (res.status == 200) {
-      const cookies = new Cookies();
-      cookies.set("Authorization", res.data?.data?.access_token, {
-        httpOnly: false,
-        path: "/",
-      });
-      cookies.set("sub", res.data?.data?.sub);
-    }
+    // if (res.status == 200) {
+    // const cookies = new Cookies();
+    // cookies.set("Authorization", res.data?.data?.access_token, {
+    //   httpOnly: false,
+    //   path: "/",
+    // });
+    // cookies.set("sub", res.data?.data?.sub);
+    // }
     return res;
   } catch (err) {
     console.error(err);
@@ -58,18 +59,48 @@ export async function login(
 }
 
 // Validate JWT token
-export async function validateCookieToken(id_token: string) {
+export async function validateCookieToken(accessToken: string) {
   const endpoint = `${url}/validate`;
 
-  const res = await api.get(endpoint, {
-    headers: {
-      Authorization: `Bearer ${id_token}`,
-    },
-  });
-  if (res.status === 200) {
+  try {
+    const res = await api.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
     const user = await res.data.data;
     return user;
-  } else {
-    console.error("Cannot get user");
+  } catch (error: any) {
+    // console.log(error.response);
+
+    if (error?.response?.data.data == "token expired") {
+      const refreshToken = getCookie("RefreshToken");
+      // console.log(refreshToken);
+      if (!refreshToken) return;
+
+      const accessTokenNew = await refreshExpiredToken(refreshToken);
+
+      console.log("refreshed...!");
+
+      const cookies = new Cookies();
+      cookies.set("Authorization", accessTokenNew, {
+        httpOnly: false,
+        path: "/",
+      });
+      cookies.set("sub", error?.response?.data?.data?.sub);
+    }
+  }
+}
+
+export async function refreshExpiredToken(refreshToken: string) {
+  const endpoint = `${url}/refresh-token`;
+  try {
+    const res = await api.post(endpoint, {
+      refresh_token: refreshToken,
+    });
+    const accessToken = await res.data.data?.access_token;
+    return accessToken;
+  } catch (err) {
+    console.error("Failed to refresh token");
   }
 }
