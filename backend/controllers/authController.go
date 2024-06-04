@@ -78,17 +78,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		log.Printf("user %s created\n", tokenClaims.Name)
 	}
 
-	// generate jwt
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"name": user.Name,
-		"sub":  user.Sub,
-		"exp":  time.Now().Add(time.Hour).Unix(), // 1 hour
-	})
-
-	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	// generate jw
+	jwtString, err := generateJWT(user, &w)
 	if err != nil {
-		log.Print(err.Error())
 		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -107,7 +99,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Set cookies
 	cookie := http.Cookie{
 		Name:     "Authorization",
-		Value:    tokenString,
+		Value:    jwtString,
 		MaxAge:   3600 * 24 * 30,
 		Path:     "/",
 		Domain:   "",
@@ -129,7 +121,36 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// respond
 	jsend.Success(w, map[string]string{"name": tokenClaims.Name,
-		"sub": tokenClaims.Sub, "access_token": tokenString, "refresh_token": refreshTokenString})
+		"sub": tokenClaims.Sub, "access_token": jwtString, "refresh_token": refreshTokenString})
+}
+
+func generateJWT(user models.User, w *http.ResponseWriter) (string, error) {
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"name": user.Name,
+		"sub":  user.Sub,
+		// "exp":  time.Now().Add(time.Minute).Unix(), // 1 Minute
+		"exp": time.Now().Add(time.Hour).Unix(), // 1 hour
+	})
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		log.Print(err.Error())
+		return "", err
+	}
+
+	// Set cookies
+	cookie := http.Cookie{
+		Name:     "Authorization",
+		Value:    tokenString,
+		MaxAge:   3600 * 24 * 30,
+		Path:     "/",
+		Domain:   "",
+		Secure:   false,
+		HttpOnly: false,
+	}
+	http.SetCookie(*w, &cookie)
+	return tokenString, nil
 }
 
 // Google login first > user login
@@ -277,34 +298,12 @@ func RefreshExpiredToken(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Attach to req
-		// generate new jwt
-		jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"name": user.Name,
-			"sub":  user.Sub,
-			"exp":  time.Now().Add(time.Hour).Unix(), // 1 hour
-		})
-		// Sign and get the complete encoded token as a string using the secret
-		tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+		tokenString, err := generateJWT(user, &w)
 		if err != nil {
-			log.Print(err.Error())
 			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-
-		// Set cookies
-		cookie := http.Cookie{
-			Name:     "Authorization",
-			Value:    tokenString,
-			MaxAge:   3600 * 24 * 30,
-			Path:     "/",
-			Domain:   "",
-			Secure:   false,
-			HttpOnly: false,
-		}
-		http.SetCookie(w, &cookie)
-
-		jsend.Success(w, map[string]string{"access_token": tokenString})
+		jsend.Success(w, map[string]string{"access_token": tokenString, "sub": *user.Sub})
 
 	} else {
 		jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
