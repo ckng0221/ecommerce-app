@@ -13,9 +13,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"clevergo.tech/jsend"
 	"github.com/coreos/go-oidc"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/oauth2"
 )
 
@@ -51,7 +54,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenClaims, idToken, refreshToken, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
+	tokenClaims, _, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
 	if err != nil {
 		log.Print(err.Error())
 		jsend.Fail(w, err, http.StatusUnauthorized)
@@ -75,10 +78,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		log.Printf("user %s created\n", tokenClaims.Name)
 	}
 
+	// generate jwt
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.Sub,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		log.Print(err.Error())
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	// Set cookies
 	cookie := http.Cookie{
 		Name:     "Authorization",
-		Value:    idToken,
+		Value:    tokenString,
 		MaxAge:   3600 * 24 * 30,
 		Path:     "/",
 		Domain:   "",
@@ -87,21 +104,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 
-	if refreshToken != "" {
-		refreshTokenCookie := http.Cookie{
-			Name:     "RefreshToken",
-			Value:    refreshToken,
-			MaxAge:   3600 * 24 * 30,
-			Path:     "/",
-			Domain:   "",
-			Secure:   false,
-			HttpOnly: false,
-		}
-		http.SetCookie(w, &refreshTokenCookie)
-	}
-
 	// respond
-	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": idToken, "refresh_token": refreshToken})
+	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": tokenString})
 }
 
 // Google login first > user login
@@ -142,9 +146,9 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.IDTokenClaims, string, string, error) {
+func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.IDTokenClaims, string, error) {
 	if state != cookieState {
-		return config.IDTokenClaims{}, "", "", errors.New("state does not match")
+		return config.IDTokenClaims{}, "", errors.New("state does not match")
 	}
 	ctx := context.Background()
 	authConfig, _ := config.GoogleConfig()
@@ -152,43 +156,43 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 
 	oauth2Token, err := authConfig.Exchange(ctx, code)
 	if err != nil {
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 	if !ok {
 		log.Println("No id_token field in oauth2 token.")
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
-	fmt.Println("access", oauth2Token.AccessToken)
+	// fmt.Println("access", oauth2Token.AccessToken)
 
-	rawRefreshToken, ok := oauth2Token.Extra("refresh_token").(string)
-	if !ok {
-		log.Println("No refresh token field in oauth2 token.")
-		// return config.IDTokenClaims{}, "", "", err
-	}
+	// rawRefreshToken, ok := oauth2Token.Extra("refresh_token").(string)
+	// if !ok {
+	// 	log.Println("No refresh token field in oauth2 token.")
+	// 	// return config.IDTokenClaims{}, "", "", err
+	// }
 	// fmt.Println(rawRefreshToken)
 
 	// JWT token from identify provider
 	idToken, err := verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		log.Println("Failed to verify id token", err)
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
 	if idToken.Nonce != nonce {
-		return config.IDTokenClaims{}, "", "", errors.New("nonce does not match")
+		return config.IDTokenClaims{}, "", errors.New("nonce does not match")
 	}
 
 	var tokenClaims config.IDTokenClaims
 	if err := idToken.Claims(&tokenClaims); err != nil {
 		// handle error
 		log.Println("Failed to unmarshal claim")
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
-	return tokenClaims, rawIDToken, rawRefreshToken, nil
+	return tokenClaims, rawIDToken, nil
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {

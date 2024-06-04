@@ -2,17 +2,18 @@ package middlewares
 
 import (
 	"context"
-	"ecommerce-app/config"
 	"ecommerce-app/initializers"
 	"ecommerce-app/models"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"clevergo.tech/jsend"
-	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt"
 )
 
 type CtxKey string
@@ -41,47 +42,79 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Decode/validate it
-		verifier := config.GetVerifier()
+		// verifier := config.GetVerifier()
 
 		// JWT token from identify provider
-		// TODO: verify access token instead of id token
-		idToken, err := verifier.Verify(ctx, bearerToken)
+
+		// idToken, err := verifier.Verify(ctx, bearerToken)
+		// if err != nil {
+		// 	if errors.Is(err, &oidc.TokenExpiredError{}) {
+		// 		log.Print(err.Error())
+		// 		log.Print("Token has expired")
+		// 		http.Error(w, "Token has expired", http.StatusUnauthorized)
+		// 		return
+		// 	} else {
+		// 		log.Print(err.Error())
+		// 		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		// 		return
+		// 	}
+		// }
+
+		// var claims config.IDTokenClaims
+		// if err := idToken.Claims(&claims); err != nil {
+		// 	// handle error
+		// 	log.Printf("failed to parse claims")
+		// 	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		// 	return
+		// }
+
+		// Decode/validate it
+		token, err := jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
+			// Don't forget to validate the alg is what you expect:
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
+			// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
 		if err != nil {
-			if errors.Is(err, &oidc.TokenExpiredError{}) {
-				log.Print(err.Error())
-				log.Print("Token has expired")
-				http.Error(w, "Token has expired", http.StatusUnauthorized)
-				return
-			} else {
-				log.Print(err.Error())
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
+			// return
+			fmt.Println("Token not found")
+			jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			// Check the exp
+			if float64(time.Now().Unix()) > claims["exp"].(float64) {
+				fmt.Println("Token expired")
+				jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-		}
 
-		var claims config.IDTokenClaims
-		if err := idToken.Claims(&claims); err != nil {
-			// handle error
-			log.Printf("failed to parse claims")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			// Find the user with token sub
+			var user models.User
+			// initializers.Db.First(&user, claims["sub"])
+			initializers.Db.Where("sub = ?", claims["sub"]).First(&user)
+
+			if user.ID == 0 {
+				fmt.Println("User not found")
+				jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			// fmt.Println(user.ID)
+			// Attach to req
+			ctx = context.WithValue(ctx, userCtxKey, user)
+
+			// Continue
+			next.ServeHTTP(w, r.WithContext(ctx))
+
+			// fmt.Println(claims["foo"], claims["nbf"])
+		} else {
+			jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-
-		// Find the user with token sub
-		// initializers.Db.Where("sub = ?", claims.Sub).Joins("DefaultAddress").First(&user)
-		initializers.Db.Where("sub = ?", claims.Sub).First(&user)
-
-		// log.Println("user", user.Name, user.ID)
-		if user.ID == 0 {
-			log.Println("User not found")
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		// Attach user to context
-		ctx = context.WithValue(ctx, userCtxKey, user)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
