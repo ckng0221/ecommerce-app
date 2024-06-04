@@ -78,7 +78,10 @@ export async function validateCookieToken(accessToken: string) {
       // console.log(refreshToken);
       if (!refreshToken) return;
 
-      const accessTokenNew = await refreshExpiredToken(refreshToken);
+      const data = await refreshExpiredToken(refreshToken);
+      console.log(data);
+      const accessTokenNew = data?.access_token;
+      const sub = data?.sub;
 
       console.log("refreshed...!");
 
@@ -87,7 +90,9 @@ export async function validateCookieToken(accessToken: string) {
         httpOnly: false,
         path: "/",
       });
-      cookies.set("sub", error?.response?.data?.data?.sub);
+      cookies.set("sub", sub);
+
+      window.location.reload();
     }
   }
 }
@@ -98,8 +103,8 @@ export async function refreshExpiredToken(refreshToken: string) {
     const res = await api.post(endpoint, {
       refresh_token: refreshToken,
     });
-    const accessToken = await res.data.data?.access_token;
-    return accessToken;
+    const data = await res.data?.data;
+    return data;
   } catch (err) {
     console.error("Failed to refresh token");
   }
