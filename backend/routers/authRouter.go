@@ -14,5 +14,6 @@ func AuthRoutes() *chi.Mux {
 	r.Get("/google-login", controllers.GoogleLogin)
 
 	r.With(middlewares.RequireAuth).Get("/validate", controllers.Validate)
+	r.Post("/refresh-token", controllers.RefreshExpiredToken)
 	return r
 }

@@ -13,9 +13,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"clevergo.tech/jsend"
 	"github.com/coreos/go-oidc"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/oauth2"
 )
 
@@ -51,7 +54,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenClaims, idToken, refreshToken, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
+	tokenClaims, _, err := getTokenClaimJwtFromLogin(bodyObj.Code, bodyObj.State, cookieState.Value, bodyObj.Nonce)
 	if err != nil {
 		log.Print(err.Error())
 		jsend.Fail(w, err, http.StatusUnauthorized)
@@ -75,10 +78,28 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		log.Printf("user %s created\n", tokenClaims.Name)
 	}
 
+	// generate jw
+	jwtString, err := generateJWT(user, &w)
+	if err != nil {
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Refresh token
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.Sub,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days
+	})
+	refreshTokenString, err := refreshToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		log.Print(err.Error())
+		jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 	// Set cookies
 	cookie := http.Cookie{
 		Name:     "Authorization",
-		Value:    idToken,
+		Value:    jwtString,
 		MaxAge:   3600 * 24 * 30,
 		Path:     "/",
 		Domain:   "",
@@ -87,21 +108,49 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 
-	if refreshToken != "" {
-		refreshTokenCookie := http.Cookie{
-			Name:     "RefreshToken",
-			Value:    refreshToken,
-			MaxAge:   3600 * 24 * 30,
-			Path:     "/",
-			Domain:   "",
-			Secure:   false,
-			HttpOnly: false,
-		}
-		http.SetCookie(w, &refreshTokenCookie)
+	refreshTokenCookie := http.Cookie{
+		Name:     "RefreshToken",
+		Value:    refreshTokenString,
+		MaxAge:   3600 * 24 * 30,
+		Path:     "/",
+		Domain:   "",
+		Secure:   false,
+		HttpOnly: false,
 	}
+	http.SetCookie(w, &refreshTokenCookie)
 
 	// respond
-	jsend.Success(w, map[string]string{"name": tokenClaims.Name, "sub": tokenClaims.Sub, "access_token": idToken, "refresh_token": refreshToken})
+	jsend.Success(w, map[string]string{"name": tokenClaims.Name,
+		"sub": tokenClaims.Sub, "access_token": jwtString, "refresh_token": refreshTokenString})
+}
+
+func generateJWT(user models.User, w *http.ResponseWriter) (string, error) {
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"name": user.Name,
+		"sub":  user.Sub,
+		// "exp":  time.Now().Add(time.Minute).Unix(), // 1 Minute
+		"exp": time.Now().Add(time.Hour).Unix(), // 1 hour
+	})
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		log.Print(err.Error())
+		return "", err
+	}
+
+	// Set cookies
+	cookie := http.Cookie{
+		Name:     "Authorization",
+		Value:    tokenString,
+		MaxAge:   3600 * 24 * 30,
+		Path:     "/",
+		Domain:   "",
+		Secure:   false,
+		HttpOnly: false,
+	}
+	http.SetCookie(*w, &cookie)
+	return tokenString, nil
 }
 
 // Google login first > user login
@@ -142,9 +191,9 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.IDTokenClaims, string, string, error) {
+func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.IDTokenClaims, string, error) {
 	if state != cookieState {
-		return config.IDTokenClaims{}, "", "", errors.New("state does not match")
+		return config.IDTokenClaims{}, "", errors.New("state does not match")
 	}
 	ctx := context.Background()
 	authConfig, _ := config.GoogleConfig()
@@ -152,49 +201,114 @@ func getTokenClaimJwtFromLogin(code, state, cookieState, nonce string) (config.I
 
 	oauth2Token, err := authConfig.Exchange(ctx, code)
 	if err != nil {
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 	if !ok {
 		log.Println("No id_token field in oauth2 token.")
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
-	fmt.Println("access", oauth2Token.AccessToken)
+	// fmt.Println("access", oauth2Token.AccessToken)
 
-	rawRefreshToken, ok := oauth2Token.Extra("refresh_token").(string)
-	if !ok {
-		log.Println("No refresh token field in oauth2 token.")
-		// return config.IDTokenClaims{}, "", "", err
-	}
+	// rawRefreshToken, ok := oauth2Token.Extra("refresh_token").(string)
+	// if !ok {
+	// 	log.Println("No refresh token field in oauth2 token.")
+	// 	// return config.IDTokenClaims{}, "", "", err
+	// }
 	// fmt.Println(rawRefreshToken)
 
 	// JWT token from identify provider
 	idToken, err := verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		log.Println("Failed to verify id token", err)
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
 	if idToken.Nonce != nonce {
-		return config.IDTokenClaims{}, "", "", errors.New("nonce does not match")
+		return config.IDTokenClaims{}, "", errors.New("nonce does not match")
 	}
 
 	var tokenClaims config.IDTokenClaims
 	if err := idToken.Claims(&tokenClaims); err != nil {
 		// handle error
 		log.Println("Failed to unmarshal claim")
-		return config.IDTokenClaims{}, "", "", err
+		return config.IDTokenClaims{}, "", err
 	}
 
-	return tokenClaims, rawIDToken, rawRefreshToken, nil
+	return tokenClaims, rawIDToken, nil
 }
 
 func Validate(w http.ResponseWriter, r *http.Request) {
 	user, _ := middlewares.GerUserFromContext(r)
 
 	jsend.Success(w, user, http.StatusOK)
+}
+
+func RefreshExpiredToken(w http.ResponseWriter, r *http.Request) {
+	reqBody := struct {
+		RefreshToken string `json:"refresh_token"`
+	}{}
+	body, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		jsend.Fail(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body, &reqBody)
+	if err != nil {
+		jsend.Fail(w, "failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	token, err := jwt.Parse(reqBody.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil {
+		// return
+		fmt.Println("Token not found")
+		jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		// Check the exp
+		if float64(time.Now().Unix()) > claims["exp"].(float64) {
+			fmt.Println("token expired")
+			jsend.Fail(w, "token exipred", http.StatusUnauthorized)
+			return
+		}
+
+		// Find the user with token sub
+		var user models.User
+		// initializers.Db.First(&user, claims["sub"])
+		initializers.Db.Where("sub = ?", claims["sub"]).First(&user)
+
+		if user.ID == 0 {
+			fmt.Println("User not found")
+			jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString, err := generateJWT(user, &w)
+		if err != nil {
+			jsend.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		jsend.Success(w, map[string]string{"access_token": tokenString, "sub": *user.Sub})
+
+	} else {
+		jsend.Fail(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 }
 
 func requireOwner(r *http.Request, ownerId string) error {
