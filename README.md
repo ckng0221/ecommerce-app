@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ckng0221/ecommerce-app/actions/workflows/ci.yml/badge.svg)](https://github.com/ckng0221/ecommerce-app/actions/workflows/ci.yml)
 
-Ecommerce App is a proof of concept (POC) e-commerce web application written in [Go](https://go.dev/) and [TypeScript](https://www.typescriptlang.org/).Users can add item to carts, perform checkout and payment. The application integrate with Stripe payment gateway, to perform payment using credit/debit card.
+Ecommerce App is a proof of concept (POC) e-commerce web application written in [Go](https://go.dev/) and [TypeScript](https://www.typescriptlang.org/). Users can add item to carts, perform checkout and payment. The application integrates with Stripe payment gateway, to perform payment using credit/debit card.
 
 - `Backend`: The backend application server for handling the REST API.
 - `Frontend`: The UI of the application.
