@@ -12,6 +12,7 @@ import { IAddress, IUser } from "../interfaces/user";
 import { toast } from "react-hot-toast";
 import BasicSelect from "../components/BasicSelect";
 import { getUserAddresses } from "../api/user";
+import Turnstile, { useTurnstile } from "react-turnstile";
 
 interface IProps {
   user: IUser;
@@ -26,6 +27,8 @@ export default function Checkout({
 }: IProps) {
   const [addresses, setAddresses] = useState<IAddress[]>([]);
   const [addressId, setAddressId] = useState<string>(user.default_address_id);
+  const [disablePayment, setDisabledPayment] = useState<boolean>(true);
+  const turnstile = useTurnstile();
 
   useEffect(() => {
     async function loadData() {
@@ -101,6 +104,22 @@ export default function Checkout({
               </div>
             );
           })}
+          <div>
+            <Turnstile
+              sitekey={import.meta.env.VITE_TURNSTILE_SITEKEY || ""}
+              onVerify={() => {
+                setDisabledPayment(false);
+              }}
+              // onVerify={(token) => {
+              //   fetch("/login", {
+              //     method: "POST",
+              //     body: JSON.stringify({ token }),
+              //   }).then((response) => {
+              //     if (!response.ok) turnstile.reset();
+              //   });
+              // }}
+            />
+          </div>
           <div className="mt-8 grid grid-cols-2">
             <div className="content-center">
               Total:{" "}
@@ -109,7 +128,11 @@ export default function Checkout({
               </span>{" "}
             </div>
             <div>
-              <Button variant="contained" onClick={performPaymentCheckout}>
+              <Button
+                variant="contained"
+                onClick={performPaymentCheckout}
+                disabled={disablePayment}
+              >
                 Proceed to payment
               </Button>
             </div>
