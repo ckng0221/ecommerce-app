@@ -55,6 +55,8 @@ func CreatePaymentSession(w http.ResponseWriter, r *http.Request) {
 		OrderID       uint           `json:"order_id"`
 	}
 
+	// TODO: verify turnstile
+
 	var checkoutRequestBody CheckoutRequestBody
 
 	body, err := io.ReadAll(r.Body)
