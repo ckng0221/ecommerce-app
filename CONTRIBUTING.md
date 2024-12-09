@@ -1,4 +1,4 @@
-# Contributing to Job Scheduler
+# Contributing to Ecommerce App
 
 As the application is just a proof of concept (POC), there are many rooms of improvement. We would love for you to contribute to the application and help make it even better than it is
 today! As a contributor, here are the guidelines we would like you to follow:
