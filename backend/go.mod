@@ -1,6 +1,7 @@
 module ecommerce-app
 
 go 1.22.0
+toolchain go1.24.1
 
 require (
 	clevergo.tech/jsend v1.1.3
@@ -12,7 +13,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/stripe/stripe-go/v78 v78.5.0
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.35.0
 	golang.org/x/oauth2 v0.20.0
 	gorm.io/driver/mysql v1.5.6
 	gorm.io/gorm v1.25.10
@@ -28,8 +29,8 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/microsoft/go-mssqldb v1.6.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	gorm.io/driver/postgres v1.5.2 // indirect
 	gorm.io/driver/sqlite v1.5.2 // indirect
 	gorm.io/driver/sqlserver v1.5.2 // indirect
@@ -45,6 +46,6 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
