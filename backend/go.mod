@@ -1,6 +1,6 @@
 module ecommerce-app
 
-go 1.22.0
+go 1.23.0
 
 require (
 	clevergo.tech/jsend v1.1.3
@@ -13,7 +13,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/stripe/stripe-go/v78 v78.5.0
 	golang.org/x/crypto v0.23.0
-	golang.org/x/oauth2 v0.20.0
+	golang.org/x/oauth2 v0.27.0
 	gorm.io/driver/mysql v1.5.6
 	gorm.io/gorm v1.25.10
 )
